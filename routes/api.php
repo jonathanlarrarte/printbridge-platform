@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AgenteController;
 use App\Http\Controllers\Api\TrabajoController;
+use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\AgenteIngestaController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,4 +27,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     Route::get('/trabajos', [TrabajoController::class, 'index']);
     Route::get('/trabajos/{id}', [TrabajoController::class, 'show']);
+
+    Route::get('/webhooks', [WebhookController::class, 'index']);
+    Route::post('/webhooks', [WebhookController::class, 'store']);
+    Route::delete('/webhooks/{id}', [WebhookController::class, 'destroy']);
+    Route::get('/webhooks/{id}/entregas', [WebhookController::class, 'entregas']);
 });

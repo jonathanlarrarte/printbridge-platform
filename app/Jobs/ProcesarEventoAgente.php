@@ -6,13 +6,14 @@ use App\Models\Agente;
 use App\Models\Evento;
 use App\Models\Impresora;
 use App\Models\TrabajoImpresion;
+use App\Models\WebhookConfigurado;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
 /**
  * Procesa en segundo plano un evento reportado por el agente (seccion 7 del
- * doc): resuelve/actualiza el trabajo de impresion y deja constancia
- * inmutable en la tabla eventos. No dispara webhooks todavia (fase futura).
+ * doc): resuelve/actualiza el trabajo de impresion, deja constancia
+ * inmutable en la tabla eventos, y dispara los webhooks suscritos.
  */
 class ProcesarEventoAgente implements ShouldQueue
 {
@@ -66,7 +67,7 @@ class ProcesarEventoAgente implements ShouldQueue
 
         // insertOrIgnore respeta el indice unico parcial (trabajo_id, tipo_evento):
         // un reintento de red del agente no duplica la fila.
-        Evento::query()->insertOrIgnore([[
+        $filasInsertadas = Evento::query()->insertOrIgnore([[
             'empresa_id' => $agente->empresa_id,
             'agente_id' => $agente->id,
             'trabajo_id' => $trabajo->id,
@@ -74,5 +75,26 @@ class ProcesarEventoAgente implements ShouldQueue
             'payload' => json_encode($this->payload),
             'creado_en' => now(),
         ]]);
+
+        // Solo se dispara el webhook si la fila es realmente nueva -- un
+        // reintento de red del agente que resulta en un insert ignorado no
+        // debe volver a notificar a los suscriptores (misma idempotencia
+        // que el resto del pipeline).
+        if ($filasInsertadas > 0) {
+            $evento = Evento::withoutGlobalScopes()
+                ->where('trabajo_id', $trabajo->id)
+                ->where('tipo_evento', $this->payload['tipo_evento'])
+                ->first();
+
+            $webhooks = WebhookConfigurado::withoutGlobalScopes()
+                ->where('empresa_id', $agente->empresa_id)
+                ->where('activo', true)
+                ->whereJsonContains('eventos_suscritos', $this->payload['tipo_evento'])
+                ->get();
+
+            foreach ($webhooks as $webhook) {
+                EntregarWebhook::dispatch($webhook->id, $evento->id);
+            }
+        }
     }
 }
