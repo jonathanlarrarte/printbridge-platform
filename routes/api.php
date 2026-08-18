@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AgenteController;
+use App\Http\Controllers\Api\EstadisticaController;
 use App\Http\Controllers\Api\TrabajoController;
 use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\AgenteIngestaController;
@@ -32,4 +33,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('/webhooks', [WebhookController::class, 'store']);
     Route::delete('/webhooks/{id}', [WebhookController::class, 'destroy']);
     Route::get('/webhooks/{id}/entregas', [WebhookController::class, 'entregas']);
+
+    Route::get('/estadisticas/resumen', [EstadisticaController::class, 'resumen']);
+    Route::get('/estadisticas/agente/{id}', [EstadisticaController::class, 'agente']);
 });

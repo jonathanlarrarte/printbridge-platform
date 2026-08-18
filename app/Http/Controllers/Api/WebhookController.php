@@ -12,13 +12,14 @@ use Illuminate\Validation\Rule;
 class WebhookController extends Controller
 {
     /**
-     * Catalogo de la seccion 8.1 del doc. agente.online/offline e
-     * impresora.online/offline quedan fuera por ahora: requieren un job
-     * programado que detecte heartbeats vencidos (fase de estadisticas/
-     * observabilidad), y no tiene sentido dejar suscribir a algo que nunca
-     * se va a disparar.
+     * Catalogo de la seccion 8.1 del doc. impresora.online/offline queda
+     * fuera por ahora: a diferencia de agente.online/offline (que ya
+     * detecta DetectarAgentesOffline + el propio heartbeat), no hay todavia
+     * una transicion equivalente rastreada por impresora, asi que no tiene
+     * sentido dejar suscribir a algo que nunca se va a disparar.
      */
     public const EVENTOS_DISPONIBLES = [
+        'agente.online', 'agente.offline',
         'trabajo.creado', 'trabajo.imprimiendo', 'trabajo.impreso', 'trabajo.fallo_definitivo',
     ];
 

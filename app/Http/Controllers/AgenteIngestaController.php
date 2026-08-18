@@ -6,6 +6,7 @@ use App\Jobs\ProcesarEventoAgente;
 use App\Models\Agente;
 use App\Models\Empresa;
 use App\Models\Impresora;
+use App\Services\EventosPlataforma;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -82,11 +83,17 @@ class AgenteIngestaController extends Controller
             'impresoras.*.protocolo' => ['nullable', 'string', 'max:50'],
         ]);
 
+        $estabaOffline = $agente->estado !== 'online';
+
         $agente->update([
             'estado' => 'online',
             'ultimo_heartbeat' => now(),
             'version_agente' => $datos['version_agente'] ?? $agente->version_agente,
         ]);
+
+        if ($estabaOffline) {
+            EventosPlataforma::registrarTransicionAgente($agente, 'agente.online');
+        }
 
         foreach ($datos['impresoras'] ?? [] as $alias => $info) {
             Impresora::updateOrCreate(
