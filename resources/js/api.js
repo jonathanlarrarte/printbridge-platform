@@ -55,15 +55,24 @@ async function llamar(ruta, opciones = {}) {
   const datos = await respuesta.json().catch(() => null);
 
   if (!respuesta.ok) {
-    throw new ApiError(datos?.error || 'error de red', respuesta.status);
+    const primerError = datos?.errors ? Object.values(datos.errors)[0]?.[0] : null;
+    throw new ApiError(primerError || datos?.error || datos?.message || 'error de red', respuesta.status);
   }
 
   return datos;
 }
 
 export const api = {
+  signup: (nombre_empresa, nombre_usuario, email, password) =>
+    llamar('/signup', { method: 'POST', body: { nombre_empresa, nombre_usuario, email, password } }),
   login: (email, password) => llamar('/login', { method: 'POST', body: { email, password } }),
   logout: () => llamar('/logout', { method: 'POST' }),
+
+  empresa: () => llamar('/v1/empresa'),
+
+  apiKeys: () => llamar('/v1/api-keys'),
+  crearApiKey: (nombre) => llamar('/v1/api-keys', { method: 'POST', body: { nombre } }),
+  borrarApiKey: (id) => llamar(`/v1/api-keys/${id}`, { method: 'DELETE' }),
 
   agentes: () => llamar('/v1/agentes'),
   agente: (id) => llamar(`/v1/agentes/${id}`),

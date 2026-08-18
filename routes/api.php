@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AgenteIngestaController;
 use App\Http\Controllers\Api\AgenteController;
+use App\Http\Controllers\Api\ApiKeyController;
+use App\Http\Controllers\Api\EmpresaController;
 use App\Http\Controllers\Api\EstadisticaController;
 use App\Http\Controllers\Api\TrabajoController;
 use App\Http\Controllers\Api\WebhookController;
@@ -11,7 +13,8 @@ use Illuminate\Support\Facades\Route;
 // Healthcheck publico (seccion 11 del doc de arquitectura).
 Route::get('/health', fn () => response()->json(['ok' => true]));
 
-// Login del dashboard: credenciales de usuario -> token de empresa (ver AuthController).
+// Signup/login del dashboard: credenciales -> token de empresa (ver AuthController).
+Route::post('/signup', [AuthController::class, 'signup']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
@@ -41,4 +44,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     Route::get('/estadisticas/resumen', [EstadisticaController::class, 'resumen']);
     Route::get('/estadisticas/agente/{id}', [EstadisticaController::class, 'agente']);
+
+    Route::get('/empresa', [EmpresaController::class, 'show']);
+
+    Route::get('/api-keys', [ApiKeyController::class, 'index']);
+    Route::post('/api-keys', [ApiKeyController::class, 'store']);
+    Route::delete('/api-keys/{id}', [ApiKeyController::class, 'destroy']);
 });

@@ -25,6 +25,8 @@ const links = [
   { name: 'trabajos', label: 'Trabajos' },
   { name: 'estadisticas', label: 'Estadísticas' },
   { name: 'webhooks', label: 'Webhooks' },
+  { name: 'documentacion', label: 'Docs' },
+  { name: 'empresa', label: 'Empresa' },
 ];
 
 async function salir() {
