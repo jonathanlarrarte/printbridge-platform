@@ -5,10 +5,15 @@ use App\Http\Controllers\Api\EstadisticaController;
 use App\Http\Controllers\Api\TrabajoController;
 use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\AgenteIngestaController;
+use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
 // Healthcheck publico (seccion 11 del doc de arquitectura).
 Route::get('/health', fn () => response()->json(['ok' => true]));
+
+// Login del dashboard: credenciales de usuario -> token de empresa (ver AuthController).
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
 // Endpoints privados agente -> plataforma (seccion 6.1). No son parte de la
 // API publica: se autentican con el token propio de la instalacion, no con
