@@ -3,6 +3,8 @@
 use Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess;
 use Dedoc\Scramble\SecurityDocumentation\MiddlewareAuthSecurityStrategy;
 
+$appUrl = rtrim(env('APP_URL', ''), '/');
+
 return [
     /*
      * Which routes to document. String or array form; use Scramble::routes() for custom selection.
@@ -57,7 +59,14 @@ return [
         /*
          * Description rendered on the home page of the API documentation (`/docs/api`).
          */
-        'description' => '',
+        'description' => <<<MD
+            API pública de PrintBridge Platform. Autenticación por `Authorization: Bearer <api_key>`
+            (Sanctum) — generá tu API key desde el dashboard, en **Empresa → API keys**.
+
+            - Guía de integración paso a paso (agentes, webhooks, SDK): [{$appUrl}/#/documentacion]({$appUrl}/#/documentacion)
+            - ¿Todavía no tenés cuenta?: [crear empresa]({$appUrl}/#/signup)
+            - Documento de auto-descubrimiento (sin auth): `GET /v1`
+            MD,
     ],
 
     'ui' => [

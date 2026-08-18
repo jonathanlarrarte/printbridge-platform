@@ -37,17 +37,18 @@ const ENDPOINTS = [
   -H "Authorization: Bearer TU_API_KEY"</pre>
     </section>
 
-    <section v-if="empresa" class="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section class="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <h2 class="mb-2 text-sm font-semibold text-slate-700">2. Instalar un agente</h2>
       <p class="mb-3 text-sm text-slate-600">
-        Al correr el instalador de <a href="https://github.com/jonathanlarrarte/printer-agent" target="_blank" rel="noopener" class="underline">PrintBridge Agent</a>,
-        usá este código de cliente para que quede vinculado a tu empresa automáticamente:
+        Cada agente corre en el equipo físico con la impresora conectada, y se autoregistra contra
+        <code class="rounded bg-slate-100 px-1">POST /agente/registrar</code> usando el código de tu empresa
+        <code v-if="empresa" class="rounded bg-slate-100 px-1">{{ empresa.codigo }}</code>.
+        Una vez conectado aparece solo en <router-link :to="{ name: 'agentes' }" class="font-medium text-slate-900 hover:underline">Agentes</router-link>.
       </p>
-      <code class="block rounded-md bg-slate-100 px-3 py-2 text-sm">{{ empresa.codigo }}</code>
-      <p class="mt-3 text-sm text-slate-600">
-        El agente se autoregistra contra <code class="rounded bg-slate-100 px-1">POST /agente/registrar</code> la primera vez que arranca
-        (no necesitás hacer nada manual acá) y a partir de ahí aparece en <router-link :to="{ name: 'agentes' }" class="font-medium text-slate-900 hover:underline">Agentes</router-link>.
-      </p>
+      <router-link :to="{ name: 'instalar-agente' }"
+                    class="inline-block rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800">
+        Ver guía completa de instalación →
+      </router-link>
     </section>
 
     <section class="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

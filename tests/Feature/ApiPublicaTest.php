@@ -17,6 +17,13 @@ class ApiPublicaTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_v1_raiz_es_publica_y_apunta_a_la_documentacion(): void
+    {
+        $this->getJson('/v1')
+            ->assertOk()
+            ->assertJsonStructure(['documentacion', 'guia_de_integracion', 'crear_cuenta', 'autenticacion']);
+    }
+
     public function test_v1_requiere_autenticacion(): void
     {
         $this->getJson('/v1/agentes')->assertUnauthorized();

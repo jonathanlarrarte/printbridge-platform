@@ -24,11 +24,22 @@ function formatoFecha(f) {
 
 <template>
   <div>
-    <h1 class="mb-6 text-lg font-semibold">Agentes</h1>
+    <div class="mb-6 flex items-center justify-between">
+      <h1 class="text-lg font-semibold">Agentes</h1>
+      <router-link :to="{ name: 'instalar-agente' }" class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800">
+        + Instalar agente
+      </router-link>
+    </div>
 
     <p v-if="cargando" class="text-sm text-slate-500">Cargando…</p>
     <p v-else-if="error" class="text-sm text-red-600">{{ error }}</p>
-    <p v-else-if="!agentes.length" class="text-sm text-slate-500">Todavía no hay agentes reportando.</p>
+
+    <div v-else-if="!agentes.length" class="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
+      <p class="mb-3 text-sm text-slate-500">Todavía no hay agentes reportando a esta empresa.</p>
+      <router-link :to="{ name: 'instalar-agente' }" class="inline-block rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800">
+        Ver cómo instalar tu primer agente →
+      </router-link>
+    </div>
 
     <div v-else class="grid gap-4 sm:grid-cols-2">
       <div v-for="agente in agentes" :key="agente.id" class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

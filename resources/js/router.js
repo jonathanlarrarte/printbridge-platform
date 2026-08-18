@@ -8,6 +8,7 @@ import Estadisticas from './pages/Estadisticas.vue';
 import Webhooks from './pages/Webhooks.vue';
 import Empresa from './pages/Empresa.vue';
 import Documentacion from './pages/Documentacion.vue';
+import InstalarAgente from './pages/InstalarAgente.vue';
 
 const PUBLICAS = ['login', 'signup'];
 
@@ -21,6 +22,7 @@ const routes = [
   { path: '/webhooks', name: 'webhooks', component: Webhooks },
   { path: '/empresa', name: 'empresa', component: Empresa },
   { path: '/documentacion', name: 'documentacion', component: Documentacion },
+  { path: '/instalar-agente', name: 'instalar-agente', component: InstalarAgente },
 ];
 
 const router = createRouter({

@@ -13,6 +13,17 @@ use Illuminate\Support\Facades\Route;
 // Healthcheck publico (seccion 11 del doc de arquitectura).
 Route::get('/health', fn () => response()->json(['ok' => true]));
 
+// Documento de auto-descubrimiento: el primer lugar donde alguien pega la
+// URL base de la API sin saber nada mas todavia deberia encontrar como
+// seguir, sin necesitar un token.
+Route::get('/v1', fn () => response()->json([
+    'plataforma' => config('app.name'),
+    'documentacion' => url('/docs/api'),
+    'guia_de_integracion' => url('/#/documentacion'),
+    'crear_cuenta' => url('/#/signup'),
+    'autenticacion' => 'Header "Authorization: Bearer <api_key>" -- generala en el dashboard (Empresa > API keys)',
+]));
+
 // Signup/login del dashboard: credenciales -> token de empresa (ver AuthController).
 Route::post('/signup', [AuthController::class, 'signup']);
 Route::post('/login', [AuthController::class, 'login']);
