@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: printbridge
+          POSTGRES_PASSWORD: printbridge
+          POSTGRES_DB: printbridge_platform_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pgsql, redis
+          coverage: none
+
+      - name: Instalar dependencias de Composer
+        run: composer install --no-interaction --prefer-dist
+        env:
+          # composer install respeta composer.lock (no re-resuelve versiones),
+          # pero se desactiva el audit igual para que un CVE nuevo en una
+          # dependencia no tumbe el pipeline -- solo debe fallar por tests o
+          # estilo, no por un aviso de seguridad que hay que evaluar aparte.
+          COMPOSER_NO_AUDIT: 1
+
+      - run: cp .env.example .env
+      - run: php artisan key:generate
+
+      - name: Migrar base de datos de test
+        run: php artisan migrate --force
+        env:
+          DB_HOST: 127.0.0.1
+          DB_DATABASE: printbridge_platform_test
+          DB_USERNAME: printbridge
+          DB_PASSWORD: printbridge
+
+      - name: Correr tests
+        run: php artisan test
+        env:
+          DB_HOST: 127.0.0.1
+          DB_DATABASE: printbridge_platform_test
+          DB_USERNAME: printbridge
+          DB_PASSWORD: printbridge
+          REDIS_HOST: 127.0.0.1
+
+      - name: Revisar estilo de codigo (Pint)
+        run: ./vendor/bin/pint --test
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build

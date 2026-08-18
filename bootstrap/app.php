@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Middleware\AutenticarAgente;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Sentry\Laravel\Integration;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'agente.auth' => \App\Http\Middleware\AutenticarAgente::class,
+            'agente.auth' => AutenticarAgente::class,
         ]);
 
         // API pura, sin pantalla de login: evita que Laravel intente
@@ -26,9 +29,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // Esta plataforma no tiene login de sesion web: las rutas v1/* y
         // agente/* deben responder JSON 401, nunca redirigir a una ruta
         // "login" inexistente.
-        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, $request) {
+        $exceptions->render(function (AuthenticationException $e, $request) {
             if ($request->is('v1/*') || $request->is('agente/*')) {
                 return response()->json(['error' => 'no autenticado'], 401);
             }
         });
+
+        // Sin SENTRY_LARAVEL_DSN configurado, el SDK queda inerte (no manda
+        // nada) -- ver seccion 11 del doc: captura de excepciones tanto en
+        // la API como en los workers de cola.
+        Integration::handles($exceptions);
     })->create();

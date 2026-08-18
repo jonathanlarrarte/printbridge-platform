@@ -1,10 +1,10 @@
 <?php
 
+use App\Http\Controllers\AgenteIngestaController;
 use App\Http\Controllers\Api\AgenteController;
 use App\Http\Controllers\Api\EstadisticaController;
 use App\Http\Controllers\Api\TrabajoController;
 use App\Http\Controllers\Api\WebhookController;
-use App\Http\Controllers\AgenteIngestaController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
