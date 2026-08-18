@@ -1,0 +1,15 @@
+{
+  "name": "@printbridge/sdk-js",
+  "version": "0.1.0",
+  "description": "SDK cliente para la API pública v1 de PrintBridge Platform",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "engines": {
+    "node": ">=19"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
