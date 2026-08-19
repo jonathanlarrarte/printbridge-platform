@@ -149,6 +149,63 @@ const SECCIONES = [
         para la integración del POS" — es distinto del token de la plataforma).
       </p>
 
+      <div class="mb-6 rounded-lg border border-slate-200 p-3">
+        <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">¿Por qué imprimís a un "target" y no a una IP o driver?</p>
+        <p class="text-sm text-slate-600">
+          El POS nunca le habla directo a una impresora — le habla a un <strong>nombre lógico</strong>
+          (<code class="rounded bg-slate-100 px-1">receipt</code>, <code class="rounded bg-slate-100 px-1">wristband</code>, el
+          que le hayas puesto). Esa indirección es la decisión de diseño central: tu código de caja no
+          necesita saber marca, protocolo ni dirección de red de la impresora física, y esa impresora
+          se puede reemplazar, mover de IP o cambiar de USB a red <strong>sin tocar una sola línea del
+          POS</strong> — solo se reconfigura el alias en la ventana del agente.
+        </p>
+      </div>
+
+      <h3 class="mb-2 text-sm font-semibold text-slate-700">Cómo resuelve el agente un <code class="rounded bg-slate-100 px-1">target</code>, paso a paso</h3>
+      <ol class="mb-6 list-inside list-decimal space-y-2 text-sm text-slate-600">
+        <li>
+          <strong>Configuración, una sola vez por caja:</strong> en la ventana del agente asociás cada alias
+          a una impresora física real — tipo de conexión (<code class="rounded bg-slate-100 px-1">red</code> o
+          <code class="rounded bg-slate-100 px-1">usb</code>/<code class="rounded bg-slate-100 px-1">local</code>),
+          <code class="rounded bg-slate-100 px-1">ip</code>+<code class="rounded bg-slate-100 px-1">puerto</code>
+          o <code class="rounded bg-slate-100 px-1">nombre_sistema</code> según el tipo, y un formato de
+          comandos por defecto. Queda guardado localmente como
+          <code class="rounded bg-slate-100 px-1">config.printers[alias]</code>.
+        </li>
+        <li>
+          <strong>El POS manda el job</strong> por WebSocket o HTTP — ambos canales son solo dos formas de
+          entrar a la misma cola interna del agente; no hay dos implementaciones distintas de ahí en adelante.
+        </li>
+        <li>
+          <strong>Resolución del alias:</strong> al procesar el job, el agente busca
+          <code class="rounded bg-slate-100 px-1">config.printers[job.target]</code>. Si el alias no existe,
+          el job falla ahí mismo (por eso el alias tiene que coincidir exacto con el configurado). De esa
+          entrada saca la conexión física y el formato por defecto si el job no mandó uno explícito.
+        </li>
+        <li>
+          <strong>Generación de los comandos:</strong> según el formato (<code class="rounded bg-slate-100 px-1">escpos</code>,
+          <code class="rounded bg-slate-100 px-1">tspl</code>, <code class="rounded bg-slate-100 px-1">html</code> o
+          <code class="rounded bg-slate-100 px-1">raw</code>) el agente arma el buffer de bytes específico de
+          esa impresora a partir del <code class="rounded bg-slate-100 px-1">data</code> genérico del job — ESC/POS
+          real vía una librería de impresión térmica, o comandos TSPL crudos (<code class="rounded bg-slate-100 px-1">SIZE</code>,
+          <code class="rounded bg-slate-100 px-1">TEXT</code>, <code class="rounded bg-slate-100 px-1">BARCODE</code>,
+          <code class="rounded bg-slate-100 px-1">PRINT</code>...) para las TSC. El mismo <code class="rounded bg-slate-100 px-1">data</code>
+          que mandás no cambia aunque cambies la impresora física detrás del alias.
+        </li>
+        <li>
+          <strong>Despacho físico:</strong> si es <code class="rounded bg-slate-100 px-1">red</code>, el agente abre un
+          socket TCP directo a <code class="rounded bg-slate-100 px-1">ip:puerto</code> (impresión "raw" estándar,
+          típicamente puerto 9100). Si es <code class="rounded bg-slate-100 px-1">usb</code>/<code class="rounded bg-slate-100 px-1">local</code>,
+          lo manda al spooler nativo de Windows por el nombre de sistema de la impresora.
+        </li>
+        <li>
+          <strong>Cola persistente y reintentos:</strong> cada job se guarda en disco antes de intentar
+          imprimirse. Si la impresora está apagada o atascada, el agente reintenta automáticamente cada
+          pocos segundos hasta 5 veces antes de reportarlo como fallo definitivo — todo esto es invisible
+          para el POS, que ya recibió su confirmación de encolado apenas mandó el job.
+        </li>
+      </ol>
+
       <h3 class="mb-2 mt-6 text-sm font-semibold text-slate-700">JavaScript (navegador) — WebSocket, con el SDK incluido</h3>
       <p class="mb-2 text-sm text-slate-600">
         <code class="rounded bg-slate-100 px-1">sdk-js/printbridge-sdk.js</code> en el repo del agente
