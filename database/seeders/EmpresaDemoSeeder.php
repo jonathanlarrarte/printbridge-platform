@@ -26,7 +26,7 @@ class EmpresaDemoSeeder extends Seeder
         );
 
         $empresa->tokens()->where('name', 'cli-verificacion')->delete();
-        $token = $empresa->createToken('cli-verificacion')->plainTextToken;
+        $token = $empresa->createToken('cli-verificacion', ['tenant'])->plainTextToken;
 
         $this->command->info("Empresa demo lista. codigo=demo, empresa_id={$empresa->id}");
         $this->command->info("Token API publica: {$token}");

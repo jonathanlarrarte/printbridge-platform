@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Middleware\AutenticarAgente;
+use App\Http\Middleware\EnsureEmpresaActiva;
+use App\Http\Middleware\EnsureSuperAdmin;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -18,6 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'agente.auth' => AutenticarAgente::class,
+            'empresa.activa' => EnsureEmpresaActiva::class,
+            'super.admin' => EnsureSuperAdmin::class,
         ]);
 
         // API pura, sin pantalla de login: evita que Laravel intente

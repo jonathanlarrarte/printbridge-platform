@@ -6,7 +6,6 @@ use App\Models\Empresa;
 use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 /**
  * Login/signup del dashboard (seccion 2 del doc: el dashboard usa "el mismo
@@ -17,9 +16,10 @@ use Illuminate\Support\Str;
 class AuthController extends Controller
 {
     /**
-     * Alta de una empresa nueva (signup self-service del SaaS): crea la
-     * empresa y su primer usuario (admin) atomicamente, y devuelve una
-     * sesion ya arrancada -- igual forma que login().
+     * Alta de una empresa nueva (signup self-service del SaaS). Queda
+     * `activo = false` -- un super admin la tiene que activar antes de que
+     * alguien pueda entrar (ver EmpresaAdminController@update). No devuelve
+     * token: todavia no hay sesion que arrancar.
      */
     public function signup(Request $request)
     {
@@ -32,12 +32,12 @@ class AuthController extends Controller
 
         $empresa = Empresa::create([
             'nombre' => $datos['nombre_empresa'],
-            'codigo' => $this->generarCodigoUnico($datos['nombre_empresa']),
+            'codigo' => Empresa::generarCodigoUnico($datos['nombre_empresa']),
             'plan' => 'piloto',
-            'activo' => true,
+            'activo' => false,
         ]);
 
-        $usuario = Usuario::create([
+        Usuario::create([
             'empresa_id' => $empresa->id,
             'nombre' => $datos['nombre_usuario'],
             'email' => $datos['email'],
@@ -46,8 +46,7 @@ class AuthController extends Controller
         ]);
 
         return response()->json([
-            'token' => $empresa->createToken('dashboard:'.$usuario->id)->plainTextToken,
-            'usuario' => ['id' => $usuario->id, 'nombre' => $usuario->nombre, 'email' => $usuario->email, 'rol' => $usuario->rol],
+            'mensaje' => 'Cuenta creada. Un administrador de la plataforma tiene que activarla antes de que puedas ingresar.',
             'empresa' => ['id' => $empresa->id, 'nombre' => $empresa->nombre, 'codigo' => $empresa->codigo],
         ], 201);
     }
@@ -59,18 +58,34 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        $usuario = Usuario::withoutGlobalScopes()->where('email', $datos['email'])->first();
+        $usuario = Usuario::withoutGlobalScopes()->with('empresa')->where('email', $datos['email'])->first();
 
         if (! $usuario || ! Hash::check($datos['password'], $usuario->password)) {
             return response()->json(['error' => 'credenciales invalidas'], 401);
         }
 
+        if (! $usuario->empresa->activo) {
+            return response()->json(['error' => 'Tu empresa todavia no fue activada por un administrador.'], 403);
+        }
+
         $empresa = $usuario->empresa;
-        $token = $empresa->createToken('dashboard:'.$usuario->id)->plainTextToken;
+        // OJO: nunca usar '*' como ability -- Sanctum lo trata como
+        // wildcard universal (PersonalAccessToken::can() le da un pase
+        // libre a CUALQUIER ability, incluida 'super-admin'). 'tenant' es
+        // la ability base de cualquier token de empresa; 'super-admin' se
+        // suma aparte solo para el usuario que de verdad lo es.
+        $abilidades = $usuario->es_super_admin ? ['tenant', 'super-admin'] : ['tenant'];
+        $token = $empresa->createToken('dashboard:'.$usuario->id, $abilidades)->plainTextToken;
 
         return response()->json([
             'token' => $token,
-            'usuario' => ['id' => $usuario->id, 'nombre' => $usuario->nombre, 'email' => $usuario->email, 'rol' => $usuario->rol],
+            'usuario' => [
+                'id' => $usuario->id,
+                'nombre' => $usuario->nombre,
+                'email' => $usuario->email,
+                'rol' => $usuario->rol,
+                'es_super_admin' => $usuario->es_super_admin,
+            ],
             'empresa' => ['id' => $empresa->id, 'nombre' => $empresa->nombre, 'codigo' => $empresa->codigo],
         ]);
     }
@@ -80,27 +95,5 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(null, 204);
-    }
-
-    /**
-     * pos-test-abcd1234 -> "mi-empresa" -> "mi-empresa-x7q2" si ya existe.
-     * Este codigo es el que el instalador del agente pide como
-     * "codigo de cliente" para POST /agente/registrar (seccion 6.1).
-     */
-    private function generarCodigoUnico(string $nombreEmpresa): string
-    {
-        $base = Str::slug($nombreEmpresa) ?: 'empresa';
-        $codigo = $base;
-        $intentos = 0;
-
-        while (Empresa::where('codigo', $codigo)->exists()) {
-            $codigo = $base.'-'.Str::lower(Str::random(4));
-
-            if (++$intentos > 20) {
-                throw new \RuntimeException('No se pudo generar un codigo de empresa unico.');
-            }
-        }
-
-        return $codigo;
     }
 }

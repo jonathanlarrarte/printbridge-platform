@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AgenteIngestaController;
+use App\Http\Controllers\Api\Admin\ApiKeyAdminController;
+use App\Http\Controllers\Api\Admin\EmpresaAdminController;
 use App\Http\Controllers\Api\AgenteController;
 use App\Http\Controllers\Api\ApiKeyController;
 use App\Http\Controllers\Api\EmpresaController;
@@ -40,7 +42,7 @@ Route::middleware('agente.auth')->group(function () {
 });
 
 // API publica v1 (seccion 6), autenticada con Sanctum token personal por empresa.
-Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+Route::prefix('v1')->middleware(['auth:sanctum', 'empresa.activa'])->group(function () {
     Route::get('/agentes', [AgenteController::class, 'index']);
     Route::get('/agentes/{id}', [AgenteController::class, 'show']);
     Route::get('/agentes/{id}/impresoras', [AgenteController::class, 'impresoras']);
@@ -61,4 +63,17 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/api-keys', [ApiKeyController::class, 'index']);
     Route::post('/api-keys', [ApiKeyController::class, 'store']);
     Route::delete('/api-keys/{id}', [ApiKeyController::class, 'destroy']);
+});
+
+// Panel de super admin: cruza el limite de tenant a proposito (ver
+// EmpresaAdminController). Requiere la ability 'super-admin' en el token,
+// no solo estar autenticado.
+Route::prefix('v1/admin')->middleware(['auth:sanctum', 'empresa.activa', 'super.admin'])->group(function () {
+    Route::get('/empresas', [EmpresaAdminController::class, 'index']);
+    Route::post('/empresas', [EmpresaAdminController::class, 'store']);
+    Route::get('/empresas/{id}', [EmpresaAdminController::class, 'show']);
+    Route::patch('/empresas/{id}', [EmpresaAdminController::class, 'update']);
+
+    Route::post('/empresas/{empresaId}/api-keys', [ApiKeyAdminController::class, 'store']);
+    Route::delete('/empresas/{empresaId}/api-keys/{id}', [ApiKeyAdminController::class, 'destroy']);
 });

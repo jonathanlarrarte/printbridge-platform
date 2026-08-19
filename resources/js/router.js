@@ -1,5 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
-import { obtenerToken } from './api';
+import { obtenerSesion, obtenerToken } from './api';
 import Login from './pages/Login.vue';
 import Signup from './pages/Signup.vue';
 import Agentes from './pages/Agentes.vue';
@@ -9,6 +9,8 @@ import Webhooks from './pages/Webhooks.vue';
 import Empresa from './pages/Empresa.vue';
 import Documentacion from './pages/Documentacion.vue';
 import InstalarAgente from './pages/InstalarAgente.vue';
+import AdminEmpresas from './pages/admin/AdminEmpresas.vue';
+import AdminEmpresaDetalle from './pages/admin/AdminEmpresaDetalle.vue';
 
 const PUBLICAS = ['login', 'signup'];
 
@@ -23,6 +25,8 @@ const routes = [
   { path: '/empresa', name: 'empresa', component: Empresa },
   { path: '/documentacion', name: 'documentacion', component: Documentacion },
   { path: '/instalar-agente', name: 'instalar-agente', component: InstalarAgente },
+  { path: '/admin/empresas', name: 'admin-empresas', component: AdminEmpresas, meta: { superAdmin: true } },
+  { path: '/admin/empresas/:id', name: 'admin-empresa', component: AdminEmpresaDetalle, meta: { superAdmin: true } },
 ];
 
 const router = createRouter({
@@ -35,6 +39,9 @@ router.beforeEach((to) => {
     return { name: 'login' };
   }
   if (PUBLICAS.includes(to.name) && obtenerToken()) {
+    return { name: 'agentes' };
+  }
+  if (to.meta.superAdmin && !obtenerSesion()?.usuario?.es_super_admin) {
     return { name: 'agentes' };
   }
 });

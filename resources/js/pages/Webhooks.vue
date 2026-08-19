@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { api } from '../api';
+import SecretoOculto from '../components/SecretoOculto.vue';
 
 // Debe coincidir con WebhookController::EVENTOS_DISPONIBLES en el backend.
 const EVENTOS_DISPONIBLES = [
@@ -75,7 +76,8 @@ async function verEntregas(id) {
       <h2 class="mb-3 text-sm font-semibold text-slate-700">Nuevo webhook</h2>
 
       <div v-if="secretoNuevo" class="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
-        Guardalo ahora, no se vuelve a mostrar: <code class="font-mono">{{ secretoNuevo }}</code>
+        <p class="mb-2">Guardalo ahora, no se vuelve a mostrar:</p>
+        <SecretoOculto :valor="secretoNuevo" />
       </div>
 
       <input

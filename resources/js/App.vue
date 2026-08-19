@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watchEffect } from 'vue';
+import { computed, ref, watchEffect } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api, limpiarSesion, obtenerSesion, obtenerToken } from './api';
 
@@ -20,14 +20,15 @@ watchEffect(() => {
   autenticado.value = !!obtenerToken() && nombreRuta !== 'login';
 });
 
-const links = [
+const links = computed(() => [
   { name: 'agentes', label: 'Agentes' },
   { name: 'trabajos', label: 'Trabajos' },
   { name: 'estadisticas', label: 'Estadísticas' },
   { name: 'webhooks', label: 'Webhooks' },
   { name: 'documentacion', label: 'Docs' },
   { name: 'empresa', label: 'Empresa' },
-];
+  ...(sesion.value?.usuario?.es_super_admin ? [{ name: 'admin-empresas', label: 'Admin' }] : []),
+]);
 
 async function salir() {
   try {

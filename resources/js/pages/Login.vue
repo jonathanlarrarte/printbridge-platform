@@ -17,7 +17,13 @@ async function enviar() {
     guardarSesion(token, usuario, empresa);
     router.push({ name: 'agentes' });
   } catch (e) {
-    error.value = e.status === 401 ? 'Email o contraseña incorrectos.' : 'No se pudo conectar con la plataforma.';
+    if (e.status === 401) {
+      error.value = 'Email o contraseña incorrectos.';
+    } else if (e.status === 403) {
+      error.value = e.message;
+    } else {
+      error.value = 'No se pudo conectar con la plataforma.';
+    }
   } finally {
     cargando.value = false;
   }

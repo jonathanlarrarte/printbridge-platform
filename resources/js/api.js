@@ -91,4 +91,13 @@ export const api = {
     llamar('/v1/webhooks', { method: 'POST', body: { url, eventos_suscritos } }),
   borrarWebhook: (id) => llamar(`/v1/webhooks/${id}`, { method: 'DELETE' }),
   entregasWebhook: (id) => llamar(`/v1/webhooks/${id}/entregas`),
+
+  // Panel de super admin -- cruza el limite de tenant a proposito.
+  adminEmpresas: () => llamar('/v1/admin/empresas'),
+  adminCrearEmpresa: (nombre, plan) => llamar('/v1/admin/empresas', { method: 'POST', body: { nombre, plan } }),
+  adminEmpresa: (id) => llamar(`/v1/admin/empresas/${id}`),
+  adminActualizarEmpresa: (id, datos) => llamar(`/v1/admin/empresas/${id}`, { method: 'PATCH', body: datos }),
+  adminCrearApiKey: (empresaId, nombre) =>
+    llamar(`/v1/admin/empresas/${empresaId}/api-keys`, { method: 'POST', body: { nombre } }),
+  adminBorrarApiKey: (empresaId, id) => llamar(`/v1/admin/empresas/${empresaId}/api-keys/${id}`, { method: 'DELETE' }),
 };

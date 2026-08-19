@@ -35,7 +35,8 @@ class ApiKeyController extends Controller
         ]);
 
         $empresa = $request->user();
-        $nuevo = $empresa->createToken($datos['nombre']);
+        // 'tenant', nunca '*' -- ver nota en AuthController@login.
+        $nuevo = $empresa->createToken($datos['nombre'], ['tenant']);
 
         return response()->json([
             'data' => [

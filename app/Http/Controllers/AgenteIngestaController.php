@@ -32,6 +32,10 @@ class AgenteIngestaController extends Controller
             return response()->json(['error' => 'codigo de cliente no reconocido'], 404);
         }
 
+        if (! $empresa->activo) {
+            return response()->json(['error' => 'esta empresa todavia no fue activada por un administrador'], 403);
+        }
+
         $agente = Agente::withoutGlobalScopes()->where('instalacion_id', $datos['instalacion_id'])->first();
 
         if ($agente && $agente->empresa_id !== $empresa->id) {

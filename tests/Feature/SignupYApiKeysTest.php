@@ -10,7 +10,7 @@ class SignupYApiKeysTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_signup_crea_empresa_y_usuario_admin_con_sesion_arrancada(): void
+    public function test_signup_crea_empresa_inactiva_pendiente_de_aprobacion(): void
     {
         $respuesta = $this->postJson('/signup', [
             'nombre_empresa' => 'Café Central',
@@ -19,9 +19,29 @@ class SignupYApiKeysTest extends TestCase
             'password' => 'clave12345',
         ]);
 
-        $respuesta->assertCreated()->assertJsonStructure(['token', 'usuario', 'empresa' => ['id', 'nombre', 'codigo']]);
+        $respuesta->assertCreated()->assertJsonStructure(['mensaje', 'empresa' => ['id', 'nombre', 'codigo']]);
+        $respuesta->assertJsonMissing(['token']);
         $this->assertSame('cafe-central', $respuesta->json('empresa.codigo'));
         $this->assertDatabaseHas('usuarios', ['email' => 'julieta@cafecentral.test', 'rol' => 'admin']);
+        $this->assertDatabaseHas('empresas', ['codigo' => 'cafe-central', 'activo' => false]);
+    }
+
+    public function test_no_se_puede_loguear_hasta_que_un_admin_active_la_empresa(): void
+    {
+        $this->postJson('/signup', [
+            'nombre_empresa' => 'Café Central', 'nombre_usuario' => 'Julieta',
+            'email' => 'julieta@cafecentral.test', 'password' => 'clave12345',
+        ]);
+
+        $this->postJson('/login', ['email' => 'julieta@cafecentral.test', 'password' => 'clave12345'])
+            ->assertStatus(403);
+
+        $empresa = Empresa::where('codigo', 'cafe-central')->first();
+        $empresa->update(['activo' => true]);
+
+        $this->postJson('/login', ['email' => 'julieta@cafecentral.test', 'password' => 'clave12345'])
+            ->assertOk()
+            ->assertJsonStructure(['token']);
     }
 
     public function test_signup_genera_codigos_distintos_para_nombres_repetidos(): void
@@ -49,12 +69,26 @@ class SignupYApiKeysTest extends TestCase
         $this->postJson('/signup', $datos)->assertStatus(422);
     }
 
-    public function test_el_codigo_de_una_empresa_nueva_sirve_para_registrar_un_agente(): void
+    public function test_el_codigo_de_una_empresa_no_activada_no_deja_registrar_agentes(): void
     {
         $codigo = $this->postJson('/signup', [
             'nombre_empresa' => 'Empresa Agente', 'nombre_usuario' => 'Admin',
             'email' => 'x@test.com', 'password' => 'clave12345',
         ])->json('empresa.codigo');
+
+        $this->postJson('/agente/registrar', [
+            'instalacion_id' => 'pos-1', 'cliente_codigo' => $codigo,
+        ])->assertStatus(403);
+    }
+
+    public function test_el_codigo_de_una_empresa_activada_si_deja_registrar_agentes(): void
+    {
+        $codigo = $this->postJson('/signup', [
+            'nombre_empresa' => 'Empresa Agente 2', 'nombre_usuario' => 'Admin',
+            'email' => 'y@test.com', 'password' => 'clave12345',
+        ])->json('empresa.codigo');
+
+        Empresa::where('codigo', $codigo)->first()->update(['activo' => true]);
 
         $this->postJson('/agente/registrar', [
             'instalacion_id' => 'pos-1', 'cliente_codigo' => $codigo,

@@ -10,12 +10,13 @@ class Usuario extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['empresa_id', 'nombre', 'email', 'rol', 'password'];
+    protected $fillable = ['empresa_id', 'nombre', 'email', 'rol', 'password', 'es_super_admin'];
 
     protected $hidden = ['password'];
 
     protected $casts = [
         'password' => 'hashed',
+        'es_super_admin' => 'boolean',
     ];
 
     public function empresa(): BelongsTo

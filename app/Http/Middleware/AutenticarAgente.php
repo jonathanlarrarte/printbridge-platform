@@ -24,10 +24,14 @@ class AutenticarAgente
 
         $hash = hash('sha256', $token);
 
-        $agente = Agente::withoutGlobalScopes()->where('token_hash', $hash)->first();
+        $agente = Agente::withoutGlobalScopes()->with('empresa')->where('token_hash', $hash)->first();
 
         if (! $agente || ! hash_equals($agente->token_hash, $hash)) {
             return response()->json(['error' => 'token de agente invalido'], 401);
+        }
+
+        if (! $agente->empresa->activo) {
+            return response()->json(['error' => 'la empresa de este agente esta desactivada'], 403);
         }
 
         $request->attributes->set('agente', $agente);

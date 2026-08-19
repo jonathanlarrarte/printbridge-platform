@@ -1,0 +1,162 @@
+<script setup>
+import { onMounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
+import { api } from '../../api';
+import SecretoOculto from '../../components/SecretoOculto.vue';
+
+const route = useRoute();
+const empresaId = route.params.id;
+
+const datos = ref(null);
+const cargando = ref(true);
+const error = ref('');
+
+const nombreNuevaKey = ref('');
+const tokenNuevo = ref(null);
+const creando = ref(false);
+
+async function cargar() {
+  cargando.value = true;
+  try {
+    datos.value = (await api.adminEmpresa(empresaId)).data;
+  } catch (e) {
+    error.value = e.message;
+  } finally {
+    cargando.value = false;
+  }
+}
+
+onMounted(cargar);
+
+async function toggleActivo() {
+  await api.adminActualizarEmpresa(empresaId, { activo: !datos.value.empresa.activo });
+  await cargar();
+}
+
+async function crearApiKey() {
+  if (!nombreNuevaKey.value) return;
+  creando.value = true;
+  error.value = '';
+  try {
+    const respuesta = await api.adminCrearApiKey(empresaId, nombreNuevaKey.value);
+    tokenNuevo.value = respuesta.token;
+    nombreNuevaKey.value = '';
+    await cargar();
+  } catch (e) {
+    error.value = e.message;
+  } finally {
+    creando.value = false;
+  }
+}
+
+async function borrarApiKey(id) {
+  await api.adminBorrarApiKey(empresaId, id);
+  await cargar();
+}
+</script>
+
+<template>
+  <div>
+    <router-link :to="{ name: 'admin-empresas' }" class="mb-4 inline-block text-sm text-slate-500 hover:text-slate-900">← Todas las empresas</router-link>
+
+    <p v-if="cargando" class="text-sm text-slate-500">Cargando…</p>
+    <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
+
+    <div v-if="datos">
+      <div class="mb-6 flex items-center justify-between">
+        <div>
+          <h1 class="text-lg font-semibold">{{ datos.empresa.nombre }}</h1>
+          <p class="font-mono text-xs text-slate-400">{{ datos.empresa.codigo }}</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="datos.empresa.activo ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'">
+            {{ datos.empresa.activo ? 'activa' : 'pendiente' }}
+          </span>
+          <button class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-50" @click="toggleActivo">
+            {{ datos.empresa.activo ? 'Desactivar' : 'Activar' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="grid gap-6 sm:grid-cols-2">
+        <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:col-span-2">
+          <h2 class="mb-3 text-sm font-semibold text-slate-700">Agentes e impresoras</h2>
+          <p v-if="!datos.agentes.length" class="text-sm text-slate-400">Todavía no tiene agentes.</p>
+          <div v-else class="space-y-3">
+            <div v-for="a in datos.agentes" :key="a.id" class="rounded-lg border border-slate-100 p-3">
+              <div class="mb-1 flex items-center justify-between">
+                <span class="font-medium text-sm">{{ a.nombre_descriptivo || a.instalacion_id }}</span>
+                <span class="rounded-full px-2 py-0.5 text-xs" :class="a.estado === 'online' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">{{ a.estado }}</span>
+              </div>
+              <p v-if="!a.impresoras.length" class="text-xs text-slate-400">Sin impresoras.</p>
+              <ul v-else class="text-xs text-slate-500">
+                <li v-for="imp in a.impresoras" :key="imp.id">
+                  {{ imp.alias }} ({{ imp.tipo }}) — {{ imp.estado_heartbeat }}
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section v-if="datos.estadisticas" class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 class="mb-3 text-sm font-semibold text-slate-700">Tasa de éxito por impresora</h2>
+          <p v-if="!datos.estadisticas.tasa_exito_por_impresora.length" class="text-sm text-slate-400">Sin datos todavía.</p>
+          <ul v-else class="space-y-1 text-sm">
+            <li v-for="i in datos.estadisticas.tasa_exito_por_impresora" :key="i.impresora_id" class="flex justify-between">
+              <span>{{ i.alias }}</span><span>{{ (i.tasa_exito * 100).toFixed(1) }}%</span>
+            </li>
+          </ul>
+        </section>
+
+        <section v-if="datos.estadisticas" class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 class="mb-3 text-sm font-semibold text-slate-700">Distribución de errores</h2>
+          <p v-if="!datos.estadisticas.distribucion_errores.length" class="text-sm text-slate-400">Sin fallos registrados.</p>
+          <ul v-else class="space-y-1 text-sm">
+            <li v-for="e in datos.estadisticas.distribucion_errores" :key="e.error_mensaje" class="flex justify-between">
+              <span class="truncate pr-2">{{ e.error_mensaje }}</span><span>{{ e.cantidad }}</span>
+            </li>
+          </ul>
+        </section>
+
+        <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:col-span-2">
+          <h2 class="mb-3 text-sm font-semibold text-slate-700">API keys (generadas en nombre de esta empresa)</h2>
+
+          <div v-if="tokenNuevo" class="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+            <p class="mb-2">Guardala ahora, no se vuelve a mostrar:</p>
+            <SecretoOculto :valor="tokenNuevo" />
+          </div>
+
+          <div class="mb-4 flex gap-2">
+            <input
+              v-model="nombreNuevaKey"
+              type="text"
+              placeholder="nombre (ej. integracion-cliente)"
+              class="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+              @keyup.enter="crearApiKey"
+            />
+            <button
+              :disabled="creando || !nombreNuevaKey"
+              class="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+              @click="crearApiKey"
+            >
+              Generar
+            </button>
+          </div>
+
+          <table class="w-full text-sm">
+            <thead class="text-left text-xs uppercase tracking-wide text-slate-400">
+              <tr><th class="py-1">Nombre</th><th class="py-1">Último uso</th><th class="py-1"></th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr v-for="k in datos.api_keys" :key="k.id">
+                <td class="py-2 font-mono text-xs">{{ k.nombre }}</td>
+                <td class="py-2 text-slate-500">{{ k.ultimo_uso ? new Date(k.ultimo_uso).toLocaleString() : 'nunca' }}</td>
+                <td class="py-2 text-right"><button class="text-xs text-red-600 hover:text-red-800" @click="borrarApiKey(k.id)">Revocar</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+    </div>
+  </div>
+</template>

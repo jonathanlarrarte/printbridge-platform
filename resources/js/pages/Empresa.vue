@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { api } from '../api';
+import SecretoOculto from '../components/SecretoOculto.vue';
 
 const empresa = ref(null);
 const apiKeys = ref([]);
@@ -92,12 +93,7 @@ async function copiar(texto, etiqueta) {
 
         <div v-if="tokenNuevo" class="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
           <p class="mb-2">Guardala ahora, no se vuelve a mostrar:</p>
-          <div class="flex items-center gap-2">
-            <code class="flex-1 break-all rounded bg-white px-2 py-1">{{ tokenNuevo }}</code>
-            <button class="shrink-0 rounded-md border border-amber-300 px-2 py-1 text-xs font-medium hover:bg-amber-100" @click="copiar(tokenNuevo, 'token')">
-              {{ copiado === 'token' ? 'Copiado' : 'Copiar' }}
-            </button>
-          </div>
+          <SecretoOculto :valor="tokenNuevo" />
         </div>
 
         <div class="mb-4 flex gap-2">
