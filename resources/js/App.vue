@@ -25,7 +25,6 @@ const links = computed(() => [
   { name: 'trabajos', label: 'Trabajos' },
   { name: 'estadisticas', label: 'Estadísticas' },
   { name: 'webhooks', label: 'Webhooks' },
-  { name: 'documentacion', label: 'Docs' },
   { name: 'empresa', label: 'Empresa' },
   ...(sesion.value?.usuario?.is_super_admin ? [{ name: 'admin-overview', label: 'Admin' }] : []),
 ]);
@@ -57,6 +56,14 @@ async function salir() {
             >
               {{ link.label }}
             </router-link>
+            <a
+              href="https://impryxa.vekronis.com/developers"
+              target="_blank"
+              rel="noopener"
+              class="rounded-md px-3 py-1.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white"
+            >
+              Docs
+            </a>
           </nav>
         </div>
         <div class="flex items-center gap-4 text-sm text-slate-300">
