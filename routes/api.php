@@ -14,6 +14,10 @@ use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
+// Publicly surfaced API: routes and JSON stay in English (integrator-
+// facing), while everything internal (controllers, models, DB columns)
+// stays in Spanish -- deliberate boundary, see app/Support/JobStatus.php.
+
 // Healthcheck publico (seccion 11 del doc de arquitectura).
 Route::get('/health', fn () => response()->json(['ok' => true]));
 
@@ -21,11 +25,11 @@ Route::get('/health', fn () => response()->json(['ok' => true]));
 // URL base de la API sin saber nada mas todavia deberia encontrar como
 // seguir, sin necesitar un token.
 Route::get('/v1', fn () => response()->json([
-    'plataforma' => config('app.name'),
-    'documentacion' => url('/docs/api'),
-    'guia_de_integracion' => url('/#/documentacion'),
-    'crear_cuenta' => url('/#/signup'),
-    'autenticacion' => 'Header "Authorization: Bearer <api_key>" -- generala en el dashboard (Empresa > API keys)',
+    'platform' => config('app.name'),
+    'documentation' => url('/docs/api'),
+    'integration_guide' => url('/#/documentacion'),
+    'sign_up' => url('/#/signup'),
+    'authentication' => 'Header "Authorization: Bearer <api_key>" -- generate one in the dashboard (Company > API keys)',
 ]));
 
 // Signup/login del dashboard: credenciales -> token de empresa (ver AuthController).
@@ -36,32 +40,32 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanc
 // Endpoints privados agente -> plataforma (seccion 6.1). No son parte de la
 // API publica: se autentican con el token propio de la instalacion, no con
 // un API key de empresa.
-Route::post('/agente/registrar', [AgenteIngestaController::class, 'registrar']);
+Route::post('/agent/register', [AgenteIngestaController::class, 'registrar']);
 
 Route::middleware('agente.auth')->group(function () {
-    Route::post('/agente/heartbeat', [AgenteIngestaController::class, 'heartbeat']);
-    Route::post('/agente/eventos', [AgenteIngestaController::class, 'eventos']);
+    Route::post('/agent/heartbeat', [AgenteIngestaController::class, 'heartbeat']);
+    Route::post('/agent/events', [AgenteIngestaController::class, 'eventos']);
 });
 
 // API publica v1 (seccion 6), autenticada con Sanctum token personal por empresa.
 Route::prefix('v1')->middleware(['auth:sanctum', 'empresa.activa'])->group(function () {
-    Route::get('/agentes', [AgenteController::class, 'index']);
-    Route::get('/agentes/{id}', [AgenteController::class, 'show']);
-    Route::get('/agentes/{id}/impresoras', [AgenteController::class, 'impresoras']);
-    Route::post('/agentes/{agenteId}/impresoras/{impresoraId}/prueba', [PruebaImpresionController::class, 'store']);
+    Route::get('/agents', [AgenteController::class, 'index']);
+    Route::get('/agents/{id}', [AgenteController::class, 'show']);
+    Route::get('/agents/{id}/printers', [AgenteController::class, 'impresoras']);
+    Route::post('/agents/{agenteId}/printers/{impresoraId}/test-print', [PruebaImpresionController::class, 'store']);
 
-    Route::get('/trabajos', [TrabajoController::class, 'index']);
-    Route::get('/trabajos/{id}', [TrabajoController::class, 'show']);
+    Route::get('/jobs', [TrabajoController::class, 'index']);
+    Route::get('/jobs/{id}', [TrabajoController::class, 'show']);
 
     Route::get('/webhooks', [WebhookController::class, 'index']);
     Route::post('/webhooks', [WebhookController::class, 'store']);
     Route::delete('/webhooks/{id}', [WebhookController::class, 'destroy']);
-    Route::get('/webhooks/{id}/entregas', [WebhookController::class, 'entregas']);
+    Route::get('/webhooks/{id}/deliveries', [WebhookController::class, 'entregas']);
 
-    Route::get('/estadisticas/resumen', [EstadisticaController::class, 'resumen']);
-    Route::get('/estadisticas/agente/{id}', [EstadisticaController::class, 'agente']);
+    Route::get('/stats/summary', [EstadisticaController::class, 'resumen']);
+    Route::get('/stats/agents/{id}', [EstadisticaController::class, 'agente']);
 
-    Route::get('/empresa', [EmpresaController::class, 'show']);
+    Route::get('/company', [EmpresaController::class, 'show']);
 
     Route::get('/api-keys', [ApiKeyController::class, 'index']);
     Route::post('/api-keys', [ApiKeyController::class, 'store']);
@@ -72,13 +76,13 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'empresa.activa'])->group(funct
 // EmpresaAdminController). Requiere la ability 'super-admin' en el token,
 // no solo estar autenticado.
 Route::prefix('v1/admin')->middleware(['auth:sanctum', 'empresa.activa', 'super.admin'])->group(function () {
-    Route::get('/resumen', [ResumenAdminController::class, 'show']);
+    Route::get('/summary', [ResumenAdminController::class, 'show']);
 
-    Route::get('/empresas', [EmpresaAdminController::class, 'index']);
-    Route::post('/empresas', [EmpresaAdminController::class, 'store']);
-    Route::get('/empresas/{id}', [EmpresaAdminController::class, 'show']);
-    Route::patch('/empresas/{id}', [EmpresaAdminController::class, 'update']);
+    Route::get('/companies', [EmpresaAdminController::class, 'index']);
+    Route::post('/companies', [EmpresaAdminController::class, 'store']);
+    Route::get('/companies/{id}', [EmpresaAdminController::class, 'show']);
+    Route::patch('/companies/{id}', [EmpresaAdminController::class, 'update']);
 
-    Route::post('/empresas/{empresaId}/api-keys', [ApiKeyAdminController::class, 'store']);
-    Route::delete('/empresas/{empresaId}/api-keys/{id}', [ApiKeyAdminController::class, 'destroy']);
+    Route::post('/companies/{empresaId}/api-keys', [ApiKeyAdminController::class, 'store']);
+    Route::delete('/companies/{empresaId}/api-keys/{id}', [ApiKeyAdminController::class, 'destroy']);
 });

@@ -14,13 +14,13 @@ async function enviar() {
   error.value = '';
   cargando.value = true;
   try {
-    const { mensaje, empresa } = await api.signup(
+    const { message, company } = await api.signup(
       nombreEmpresa.value,
       nombreUsuario.value,
       email.value,
       password.value
     );
-    resultado.value = { mensaje, empresa };
+    resultado.value = { mensaje: message, empresa: company };
   } catch (e) {
     error.value = e.message;
   } finally {
@@ -35,7 +35,7 @@ async function enviar() {
       <h1 class="mb-2 text-xl font-semibold">¡Listo!</h1>
       <p class="mb-4 text-sm text-slate-600">{{ resultado.mensaje }}</p>
       <p class="mb-6 text-xs text-slate-400">
-        Código de tu empresa: <code class="rounded bg-slate-100 px-1 py-0.5">{{ resultado.empresa.codigo }}</code>
+        Código de tu empresa: <code class="rounded bg-slate-100 px-1 py-0.5">{{ resultado.empresa.code }}</code>
       </p>
       <router-link :to="{ name: 'login' }" class="inline-block rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800">
         Ir a la pantalla de ingreso

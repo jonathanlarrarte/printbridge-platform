@@ -38,7 +38,7 @@ async function crear() {
 }
 
 async function toggleActivo(empresa) {
-  await api.adminActualizarEmpresa(empresa.id, { activo: !empresa.activo });
+  await api.adminActualizarEmpresa(empresa.id, { active: !empresa.active });
   await cargar();
 }
 </script>
@@ -86,20 +86,20 @@ async function toggleActivo(empresa) {
         <tr v-for="e in empresas" :key="e.id">
           <td class="px-4 py-3">
             <router-link :to="{ name: 'admin-empresa', params: { id: e.id } }" class="font-medium text-slate-900 hover:underline">
-              {{ e.nombre }}
+              {{ e.name }}
             </router-link>
           </td>
-          <td class="px-4 py-3 font-mono text-xs">{{ e.codigo }}</td>
+          <td class="px-4 py-3 font-mono text-xs">{{ e.code }}</td>
           <td class="px-4 py-3">{{ e.plan }}</td>
-          <td class="px-4 py-3">{{ e.agentes_count }}</td>
+          <td class="px-4 py-3">{{ e.agents_count }}</td>
           <td class="px-4 py-3">
-            <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="e.activo ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'">
-              {{ e.activo ? 'activa' : 'pendiente' }}
+            <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="e.active ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'">
+              {{ e.active ? 'activa' : 'pendiente' }}
             </span>
           </td>
           <td class="px-4 py-3 text-right">
             <button class="text-xs font-medium text-slate-600 hover:text-slate-900" @click="toggleActivo(e)">
-              {{ e.activo ? 'Desactivar' : 'Activar' }}
+              {{ e.active ? 'Desactivar' : 'Activar' }}
             </button>
           </td>
         </tr>

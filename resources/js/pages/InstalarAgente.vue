@@ -82,8 +82,8 @@ npm run dist</pre>
         <div v-if="empresa">
           <dt class="mb-1 font-medium text-slate-700">Código de cliente</dt>
           <dd class="flex items-center gap-2">
-            <code class="flex-1 rounded-md bg-slate-100 px-3 py-2">{{ empresa.codigo }}</code>
-            <button class="rounded-md border border-slate-300 px-3 py-2 text-xs font-medium hover:bg-slate-50" @click="copiar(empresa.codigo, 'codigo')">
+            <code class="flex-1 rounded-md bg-slate-100 px-3 py-2">{{ empresa.code }}</code>
+            <button class="rounded-md border border-slate-300 px-3 py-2 text-xs font-medium hover:bg-slate-50" @click="copiar(empresa.code, 'codigo')">
               {{ copiado === 'codigo' ? 'Copiado' : 'Copiar' }}
             </button>
           </dd>

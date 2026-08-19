@@ -13,7 +13,7 @@ onMounted(async () => {
   }
 });
 
-const codigo = () => empresa.value?.codigo || 'TU_CODIGO_DE_EMPRESA';
+const codigo = () => empresa.value?.code || 'TU_CODIGO_DE_EMPRESA';
 
 const SECCIONES = [
   ['arquitectura', '1. Arquitectura del flujo completo'],
@@ -344,31 +344,31 @@ pb.imprimir("wristband", "tspl", Map.of(
       <h3 class="mb-2 text-sm font-semibold text-slate-700">Consultar el estado de todas las sucursales</h3>
       <div class="mb-6 grid gap-3 sm:grid-cols-2">
         <pre class="overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100">// JavaScript (fetch)
-const resp = await fetch('{{ baseUrl }}/v1/agentes', {
+const resp = await fetch('{{ baseUrl }}/v1/agents', {
   headers: { Authorization: `Bearer ${API_KEY}` }
 });
-const { data: agentes } = await resp.json();
-agentes.forEach(a =>
-  console.log(a.nombre_descriptivo, a.estado)
+const { data: agents } = await resp.json();
+agents.forEach(a =>
+  console.log(a.display_name, a.status)
 );</pre>
         <pre class="overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100"># Python (requests)
 import requests
 
 resp = requests.get(
-    "{{ baseUrl }}/v1/agentes",
+    "{{ baseUrl }}/v1/agents",
     headers={"Authorization": f"Bearer {API_KEY}"},
 )
 for a in resp.json()["data"]:
-    print(a["nombre_descriptivo"], a["estado"])</pre>
+    print(a["display_name"], a["status"])</pre>
         <pre class="overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100">// PHP (curl)
-$ch = curl_init("{{ baseUrl }}/v1/agentes");
+$ch = curl_init("{{ baseUrl }}/v1/agents");
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HTTPHEADER => ["Authorization: Bearer $apiKey"],
 ]);
-$agentes = json_decode(curl_exec($ch), true)['data'];
-foreach ($agentes as $a) {
-    echo "{$a['nombre_descriptivo']}: {$a['estado']}\n";
+$agents = json_decode(curl_exec($ch), true)['data'];
+foreach ($agents as $a) {
+    echo "{$a['display_name']}: {$a['status']}\n";
 }</pre>
         <pre class="overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100">// C# (.NET, HttpClient)
 var http = new HttpClient();
@@ -376,22 +376,22 @@ http.DefaultRequestHeaders.Authorization =
     new("Bearer", apiKey);
 
 var resp = await http.GetFromJsonAsync
-    &lt;RespuestaAgentes&gt;("{{ baseUrl }}/v1/agentes");
+    &lt;AgentsResponse&gt;("{{ baseUrl }}/v1/agents");
 foreach (var a in resp.Data)
-    Console.WriteLine($"{a.NombreDescriptivo}: {a.Estado}");</pre>
+    Console.WriteLine($"{a.DisplayName}: {a.Status}");</pre>
       </div>
 
       <h3 class="mb-2 text-sm font-semibold text-slate-700">Estadísticas agregadas de la cadena</h3>
-      <pre class="mb-6 overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100">curl {{ baseUrl }}/v1/estadisticas/resumen \
+      <pre class="mb-6 overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100">curl {{ baseUrl }}/v1/stats/summary \
   -H "Authorization: Bearer $API_KEY"
 
-# {"tasa_exito_por_impresora":[...], "uptime_por_agente":[...],
-#  "distribucion_errores":[...], "volumen_por_hora":[...], ...}</pre>
+# {"success_rate_by_printer":[...], "uptime_by_agent":[...],
+#  "error_distribution":[...], "volume_by_hour":[...], ...}</pre>
 
       <h3 class="mb-2 text-sm font-semibold text-slate-700">Alertas automáticas (webhooks) — ej. avisar si una caja se cae</h3>
       <p class="mb-3 text-sm text-slate-600">
-        Suscribite a <code class="rounded bg-slate-100 px-1">agente.offline</code> y
-        <code class="rounded bg-slate-100 px-1">trabajo.fallo_definitivo</code> desde
+        Suscribite a <code class="rounded bg-slate-100 px-1">agent.offline</code> y
+        <code class="rounded bg-slate-100 px-1">job.failed</code> desde
         <router-link :to="{ name: 'webhooks' }" class="underline">Webhooks</router-link>, y verificá
         la firma en tu receptor:
       </p>
@@ -407,9 +407,9 @@ app.post('/webhooks/printbridge',
 
     if (firma !== esperada) return res.sendStatus(401);
 
-    const evento = JSON.parse(req.body);
-    if (evento.tipo_evento === 'agente.offline') {
-      avisarPorSlack(`Caja caida: ${evento.datos.instalacion_id}`);
+    const event = JSON.parse(req.body);
+    if (event.event_type === 'agent.offline') {
+      avisarPorSlack(`Caja caida: ${event.payload.installation_id}`);
     }
     res.sendStatus(200);
   });</pre>
@@ -424,16 +424,16 @@ def webhook():
     if not hmac.compare_digest(firma, esperada):
         return "", 401
 
-    evento = request.get_json()
-    if evento["tipo_evento"] == "agente.offline":
+    event = request.get_json()
+    if event["event_type"] == "agent.offline":
         avisar_por_slack(
-            f"Caida: {evento['datos']['instalacion_id']}"
+            f"Caida: {event['payload']['installation_id']}"
         )
     return "", 200</pre>
       </div>
       <p class="mt-3 text-sm text-slate-600">
         El SDK JS de la plataforma (<code class="rounded bg-slate-100 px-1">sdk-js/</code> en este
-        repo) ya trae <code class="rounded bg-slate-100 px-1">verificarFirmaWebhook()</code> resuelto.
+        repo) ya trae <code class="rounded bg-slate-100 px-1">verifyWebhookSignature()</code> resuelto.
       </p>
     </section>
 
@@ -445,12 +445,12 @@ def webhook():
         cliente</strong> — el aislamiento en la plataforma es por empresa, no por sucursal:
       </p>
       <div v-if="empresa" class="mb-4 flex items-center gap-2">
-        <code class="flex-1 rounded-md bg-slate-100 px-3 py-2 text-sm">{{ empresa.codigo }}</code>
+        <code class="flex-1 rounded-md bg-slate-100 px-3 py-2 text-sm">{{ empresa.code }}</code>
       </div>
       <ol class="mb-4 list-inside list-decimal space-y-1 text-sm text-slate-600">
         <li>Instalás el mismo <code class="rounded bg-slate-100 px-1">.exe</code> en cada caja de cada sucursal.</li>
         <li>En la ventana del agente, pegás la URL de la plataforma + este código de cliente, una vez por caja.</li>
-        <li>El agente se autoregistra (<code class="rounded bg-slate-100 px-1">POST /agente/registrar</code>) y aparece en <router-link :to="{ name: 'agentes' }" class="underline">Agentes</router-link>.</li>
+        <li>El agente se autoregistra (<code class="rounded bg-slate-100 px-1">POST /agent/register</code>) y aparece en <router-link :to="{ name: 'agentes' }" class="underline">Agentes</router-link>.</li>
       </ol>
       <p class="text-sm text-slate-600">
         Ver el <router-link :to="{ name: 'instalar-agente' }" class="font-medium underline">paso a paso completo</router-link>
@@ -464,7 +464,7 @@ def webhook():
 
       <h3 class="mb-1 text-sm font-semibold text-slate-700">Nomenclatura recomendada</h3>
       <p class="mb-3 text-sm text-slate-600">
-        <code class="rounded bg-slate-100 px-1">nombre_descriptivo</code> es el único campo humano
+        <code class="rounded bg-slate-100 px-1">display_name</code> es el único campo humano
         de cada agente — usalo para identificar sucursal + caja de un vistazo, ej.
         <code class="rounded bg-slate-100 px-1">"Sucursal Norte — Caja 3"</code> o
         <code class="rounded bg-slate-100 px-1">"SN-03"</code> si preferís un código corto. Se
@@ -487,7 +487,7 @@ def webhook():
       <ul class="mb-4 list-inside list-disc space-y-1 text-sm text-slate-600">
         <li><router-link :to="{ name: 'agentes' }" class="underline">Agentes</router-link> — estado online/offline y última impresión de cada impresora, de las 10 sucursales juntas.</li>
         <li><router-link :to="{ name: 'estadisticas' }" class="underline">Estadísticas</router-link> — tasa de éxito y volumen agregado de toda la cadena.</li>
-        <li>Webhook a <code class="rounded bg-slate-100 px-1">agente.offline</code> — alerta automática si una sucursal entera pierde conexión (heartbeat vencido &gt;60s).</li>
+        <li>Webhook a <code class="rounded bg-slate-100 px-1">agent.offline</code> — alerta automática si una sucursal entera pierde conexión (heartbeat vencido &gt;60s).</li>
       </ul>
 
       <h3 class="mb-1 text-sm font-semibold text-slate-700">Límite honesto del modelo actual</h3>
@@ -495,8 +495,8 @@ def webhook():
         Hoy no existe un concepto nativo de "sucursal" en los datos — solo
         <code class="rounded bg-slate-100 px-1">empresa → agentes → impresoras</code>. Para 10
         locales, la sucursal se identifica por convención de nombres
-        (<code class="rounded bg-slate-100 px-1">nombre_descriptivo</code>) y filtrando por
-        <code class="rounded bg-slate-100 px-1">agente_id</code> en <code class="rounded bg-slate-100 px-1">/v1/trabajos</code>.
+        (<code class="rounded bg-slate-100 px-1">display_name</code>) y filtrando por
+        <code class="rounded bg-slate-100 px-1">agent_id</code> en <code class="rounded bg-slate-100 px-1">/v1/jobs</code>.
         Funciona bien hasta que necesites, por ejemplo, permisos distintos por sucursal — en ese
         punto tiene sentido agregar una entidad <code class="rounded bg-slate-100 px-1">sucursales</code> real
         agrupando agentes. Contanos si es tu caso.
@@ -510,7 +510,7 @@ def webhook():
         <li>Cada caja necesita salida <strong>HTTPS saliente</strong> hacia la URL de la plataforma (no entrante — revisá proxy/firewall corporativo del parque, no del local).</li>
         <li>El canal local (<code class="rounded bg-amber-100 px-1">localhost:8181</code>) es <em>local a esa máquina</em>: si tu POS corre en otro equipo de la misma red, no le va a llegar — el agente va uno por caja física.</li>
         <li>El <code class="rounded bg-amber-100 px-1">token</code> del canal local (por caja) y tu API key de plataforma (por empresa) son cosas distintas — no se mezclan.</li>
-        <li>Si una impresora nunca reporta <code class="rounded bg-amber-100 px-1">estado_heartbeat: online</code>, revisá el alias — tiene que coincidir exacto entre lo configurado en el agente y el <code class="rounded bg-amber-100 px-1">target</code> que manda tu POS.</li>
+        <li>Si una impresora nunca reporta <code class="rounded bg-amber-100 px-1">status: online</code>, revisá el alias — tiene que coincidir exacto entre lo configurado en el agente y el <code class="rounded bg-amber-100 px-1">target</code> que manda tu POS.</li>
         <li>Para debug rápido sin tocar código: <code class="rounded bg-amber-100 px-1">GET http://localhost:8181/health</code> en cualquier caja confirma que el agente está vivo.</li>
       </ul>
     </section>

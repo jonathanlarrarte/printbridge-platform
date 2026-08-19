@@ -13,15 +13,15 @@ class SignupYApiKeysTest extends TestCase
     public function test_signup_crea_empresa_inactiva_pendiente_de_aprobacion(): void
     {
         $respuesta = $this->postJson('/signup', [
-            'nombre_empresa' => 'Café Central',
-            'nombre_usuario' => 'Julieta',
+            'company_name' => 'Café Central',
+            'user_name' => 'Julieta',
             'email' => 'julieta@cafecentral.test',
             'password' => 'clave12345',
         ]);
 
-        $respuesta->assertCreated()->assertJsonStructure(['mensaje', 'empresa' => ['id', 'nombre', 'codigo']]);
+        $respuesta->assertCreated()->assertJsonStructure(['message', 'company' => ['id', 'name', 'code']]);
         $respuesta->assertJsonMissing(['token']);
-        $this->assertSame('cafe-central', $respuesta->json('empresa.codigo'));
+        $this->assertSame('cafe-central', $respuesta->json('company.code'));
         $this->assertDatabaseHas('usuarios', ['email' => 'julieta@cafecentral.test', 'rol' => 'admin']);
         $this->assertDatabaseHas('empresas', ['codigo' => 'cafe-central', 'activo' => false]);
     }
@@ -29,7 +29,7 @@ class SignupYApiKeysTest extends TestCase
     public function test_no_se_puede_loguear_hasta_que_un_admin_active_la_empresa(): void
     {
         $this->postJson('/signup', [
-            'nombre_empresa' => 'Café Central', 'nombre_usuario' => 'Julieta',
+            'company_name' => 'Café Central', 'user_name' => 'Julieta',
             'email' => 'julieta@cafecentral.test', 'password' => 'clave12345',
         ]);
 
@@ -47,14 +47,14 @@ class SignupYApiKeysTest extends TestCase
     public function test_signup_genera_codigos_distintos_para_nombres_repetidos(): void
     {
         $datos = fn ($email) => [
-            'nombre_empresa' => 'Café Central',
-            'nombre_usuario' => 'Admin',
+            'company_name' => 'Café Central',
+            'user_name' => 'Admin',
             'email' => $email,
             'password' => 'clave12345',
         ];
 
-        $primero = $this->postJson('/signup', $datos('a@test.com'))->json('empresa.codigo');
-        $segundo = $this->postJson('/signup', $datos('b@test.com'))->json('empresa.codigo');
+        $primero = $this->postJson('/signup', $datos('a@test.com'))->json('company.code');
+        $segundo = $this->postJson('/signup', $datos('b@test.com'))->json('company.code');
 
         $this->assertNotSame($primero, $segundo);
     }
@@ -62,7 +62,7 @@ class SignupYApiKeysTest extends TestCase
     public function test_signup_rechaza_email_ya_usado(): void
     {
         $datos = [
-            'nombre_empresa' => 'Empresa A', 'nombre_usuario' => 'Admin',
+            'company_name' => 'Empresa A', 'user_name' => 'Admin',
             'email' => 'dup@test.com', 'password' => 'clave12345',
         ];
         $this->postJson('/signup', $datos)->assertCreated();
@@ -72,26 +72,26 @@ class SignupYApiKeysTest extends TestCase
     public function test_el_codigo_de_una_empresa_no_activada_no_deja_registrar_agentes(): void
     {
         $codigo = $this->postJson('/signup', [
-            'nombre_empresa' => 'Empresa Agente', 'nombre_usuario' => 'Admin',
+            'company_name' => 'Empresa Agente', 'user_name' => 'Admin',
             'email' => 'x@test.com', 'password' => 'clave12345',
-        ])->json('empresa.codigo');
+        ])->json('company.code');
 
-        $this->postJson('/agente/registrar', [
-            'instalacion_id' => 'pos-1', 'cliente_codigo' => $codigo,
+        $this->postJson('/agent/register', [
+            'installation_id' => 'pos-1', 'client_code' => $codigo,
         ])->assertStatus(403);
     }
 
     public function test_el_codigo_de_una_empresa_activada_si_deja_registrar_agentes(): void
     {
         $codigo = $this->postJson('/signup', [
-            'nombre_empresa' => 'Empresa Agente 2', 'nombre_usuario' => 'Admin',
+            'company_name' => 'Empresa Agente 2', 'user_name' => 'Admin',
             'email' => 'y@test.com', 'password' => 'clave12345',
-        ])->json('empresa.codigo');
+        ])->json('company.code');
 
         Empresa::where('codigo', $codigo)->first()->update(['activo' => true]);
 
-        $this->postJson('/agente/registrar', [
-            'instalacion_id' => 'pos-1', 'cliente_codigo' => $codigo,
+        $this->postJson('/agent/register', [
+            'installation_id' => 'pos-1', 'client_code' => $codigo,
         ])->assertOk();
     }
 
@@ -102,8 +102,8 @@ class SignupYApiKeysTest extends TestCase
 
         $this->getJson('/v1/api-keys', $headers)->assertOk()->assertJsonCount(1, 'data');
 
-        $crear = $this->postJson('/v1/api-keys', ['nombre' => 'integracion'], $headers);
-        $crear->assertCreated()->assertJsonStructure(['data' => ['id', 'nombre'], 'token']);
+        $crear = $this->postJson('/v1/api-keys', ['name' => 'integracion'], $headers);
+        $crear->assertCreated()->assertJsonStructure(['data' => ['id', 'name'], 'token']);
 
         $this->getJson('/v1/api-keys', $headers)->assertOk()->assertJsonCount(2, 'data');
 
@@ -117,9 +117,9 @@ class SignupYApiKeysTest extends TestCase
         $empresa = Empresa::create(['nombre' => 'Demo', 'codigo' => 'demo', 'plan' => 'piloto', 'activo' => true]);
         $headers = ['Authorization' => 'Bearer '.$empresa->createToken('t')->plainTextToken];
 
-        $this->getJson('/v1/empresa', $headers)
+        $this->getJson('/v1/company', $headers)
             ->assertOk()
-            ->assertJsonPath('data.codigo', 'demo')
-            ->assertJsonPath('data.nombre', 'Demo');
+            ->assertJsonPath('data.code', 'demo')
+            ->assertJsonPath('data.name', 'Demo');
     }
 }

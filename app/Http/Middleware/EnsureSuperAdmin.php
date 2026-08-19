@@ -20,7 +20,7 @@ class EnsureSuperAdmin
         $token = $request->user()?->currentAccessToken();
 
         if (! $token || ! $token->can('super-admin')) {
-            return response()->json(['error' => 'no autorizado'], 403);
+            return response()->json(['error' => 'unauthorized'], 403);
         }
 
         return $next($request);

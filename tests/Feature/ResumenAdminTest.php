@@ -28,22 +28,22 @@ class ResumenAdminTest extends TestCase
         TrabajoImpresion::create(['agente_id' => $agenteA->id, 'job_id_externo' => 'j1', 'target' => 'receipt', 'estado' => 'impreso']);
         TrabajoImpresion::create(['agente_id' => $agenteA->id, 'job_id_externo' => 'j2', 'target' => 'receipt', 'estado' => 'fallo_definitivo']);
 
-        $respuesta = $this->getJson('/v1/admin/resumen', ['Authorization' => "Bearer {$token}"]);
+        $respuesta = $this->getJson('/v1/admin/summary', ['Authorization' => "Bearer {$token}"]);
 
         $respuesta->assertOk();
-        $this->assertSame(3, $respuesta->json('data.empresas.total')); // plataforma + a + b
-        $this->assertSame(2, $respuesta->json('data.empresas.activas'));
-        $this->assertSame(1, $respuesta->json('data.empresas.pendientes'));
-        $this->assertSame(2, $respuesta->json('data.agentes.total'));
-        $this->assertSame(1, $respuesta->json('data.agentes.online'));
-        $this->assertSame(1, $respuesta->json('data.trabajos_24h.impresos'));
-        $this->assertSame(1, $respuesta->json('data.trabajos_24h.fallidos'));
+        $this->assertSame(3, $respuesta->json('data.companies.total')); // plataforma + a + b
+        $this->assertSame(2, $respuesta->json('data.companies.active'));
+        $this->assertSame(1, $respuesta->json('data.companies.pending'));
+        $this->assertSame(2, $respuesta->json('data.agents.total'));
+        $this->assertSame(1, $respuesta->json('data.agents.online'));
+        $this->assertSame(1, $respuesta->json('data.jobs_24h.printed'));
+        $this->assertSame(1, $respuesta->json('data.jobs_24h.failed'));
 
         // Regresion: withCount('agentes') sin desactivar el global scope de
         // Agente contaba solo los agentes de la PROPIA empresa del super
         // admin autenticado (Plataforma, 0 agentes), no los de "A" (1).
-        $topA = collect($respuesta->json('data.top_empresas'))->firstWhere('codigo', 'a');
-        $this->assertSame(1, $topA['agentes_count']);
+        $topA = collect($respuesta->json('data.top_companies'))->firstWhere('code', 'a');
+        $this->assertSame(1, $topA['agents_count']);
     }
 
     public function test_resumen_requiere_super_admin(): void
@@ -51,6 +51,6 @@ class ResumenAdminTest extends TestCase
         $empresa = Empresa::create(['nombre' => 'Demo', 'codigo' => 'demo', 'plan' => 'piloto', 'activo' => true]);
         $headers = ['Authorization' => 'Bearer '.$empresa->createToken('t', ['tenant'])->plainTextToken];
 
-        $this->getJson('/v1/admin/resumen', $headers)->assertStatus(403);
+        $this->getJson('/v1/admin/summary', $headers)->assertStatus(403);
     }
 }

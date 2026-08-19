@@ -9,8 +9,8 @@ use App\Models\WebhookConfigurado;
 
 /**
  * Punto compartido para registrar eventos que no vienen de
- * POST /agente/eventos (es decir, transiciones detectadas por la propia
- * plataforma: agente.online/agente.offline) y disparar sus webhooks
+ * POST /agent/events (es decir, transiciones detectadas por la propia
+ * plataforma: agent.online/agent.offline) y disparar sus webhooks
  * suscritos, reusando el mismo criterio de AgenteIngestaController@eventos
  * y ProcesarEventoAgente.
  */
@@ -23,7 +23,7 @@ class EventosPlataforma
             'agente_id' => $agente->id,
             'trabajo_id' => null,
             'tipo_evento' => $tipoEvento,
-            'payload' => ['instalacion_id' => $agente->instalacion_id],
+            'payload' => ['installation_id' => $agente->instalacion_id],
             'creado_en' => now(),
         ]);
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\JobStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -16,18 +17,18 @@ class TrabajoResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'agente_id' => $this->agente_id,
-            'impresora_id' => $this->impresora_id,
-            'job_id_externo' => $this->job_id_externo,
+            'agent_id' => $this->agente_id,
+            'printer_id' => $this->impresora_id,
+            'external_job_id' => $this->job_id_externo,
             'target' => $this->target,
             'format' => $this->format,
-            'estado' => $this->estado,
-            'intentos' => $this->intentos,
-            'error_mensaje' => $this->error_mensaje,
-            'duracion_ms' => $this->duracion_ms,
-            'creado_en' => $this->created_at,
-            'actualizado_en' => $this->updated_at,
-            'eventos' => EventoResource::collection($this->whenLoaded('eventos')),
+            'status' => JobStatus::toApi($this->estado),
+            'attempts' => $this->intentos,
+            'error_message' => $this->error_mensaje,
+            'duration_ms' => $this->duracion_ms,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+            'events' => EventoResource::collection($this->whenLoaded('eventos')),
         ];
     }
 }

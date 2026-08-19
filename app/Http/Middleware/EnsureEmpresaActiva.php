@@ -19,7 +19,7 @@ class EnsureEmpresaActiva
         $empresa = $request->user();
 
         if ($empresa && ! $empresa->activo) {
-            return response()->json(['error' => 'esta empresa esta desactivada'], 403);
+            return response()->json(['error' => 'this company is deactivated'], 403);
         }
 
         return $next($request);

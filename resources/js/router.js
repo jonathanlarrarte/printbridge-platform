@@ -45,7 +45,7 @@ router.beforeEach((to) => {
   if (PUBLICAS.includes(to.name) && obtenerToken()) {
     return { name: 'agentes' };
   }
-  if (to.meta.superAdmin && !obtenerSesion()?.usuario?.es_super_admin) {
+  if (to.meta.superAdmin && !obtenerSesion()?.usuario?.is_super_admin) {
     return { name: 'agentes' };
   }
 });

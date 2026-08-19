@@ -17,15 +17,15 @@ class ApiKeyAdminController extends Controller
 {
     public function store(Request $request, int $empresaId)
     {
-        $datos = $request->validate(['nombre' => ['required', 'string', 'max:255']]);
+        $datos = $request->validate(['name' => ['required', 'string', 'max:255']]);
 
         $empresa = Empresa::withoutGlobalScopes()->findOrFail($empresaId);
         // 'tenant', nunca '*' -- un token generado por el admin para un
         // cliente es un token de tenant normal, no hereda 'super-admin'.
-        $nuevo = $empresa->createToken($datos['nombre'], ['tenant']);
+        $nuevo = $empresa->createToken($datos['name'], ['tenant']);
 
         return response()->json([
-            'data' => ['id' => $nuevo->accessToken->id, 'nombre' => $nuevo->accessToken->name, 'creado_en' => $nuevo->accessToken->created_at],
+            'data' => ['id' => $nuevo->accessToken->id, 'name' => $nuevo->accessToken->name, 'created_at' => $nuevo->accessToken->created_at],
             'token' => $nuevo->plainTextToken,
         ], 201);
     }

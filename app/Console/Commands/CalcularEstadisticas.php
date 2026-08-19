@@ -8,14 +8,17 @@ use App\Models\EstadisticaAgregada;
 use App\Models\Evento;
 use App\Models\Impresora;
 use App\Models\TrabajoImpresion;
+use App\Support\EventType;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 
 /**
  * Seccion 9 del doc: pre-calcula metricas cada 5-15 min y las deja en
- * estadisticas_agregadas, para que GET /v1/estadisticas/* nunca agregue en
- * tiempo real sobre la tabla cruda de eventos/trabajos.
+ * estadisticas_agregadas, para que GET /v1/stats/* nunca agregue en
+ * tiempo real sobre la tabla cruda de eventos/trabajos. El JSON guardado
+ * en `datos` se sirve tal cual por la API publica, asi que sus claves
+ * estan en ingles a proposito (ver app/Support/EventType.php).
  */
 class CalcularEstadisticas extends Command
 {
@@ -42,12 +45,12 @@ class CalcularEstadisticas extends Command
     private function guardarSnapshot(Empresa $empresa, ?int $agenteId, array $agenteIds, Collection $agentesParaUptime): void
     {
         $datos = [
-            'tasa_exito_por_impresora' => $this->tasaExitoPorImpresora($agenteIds),
-            'tiempo_promedio_impresion_ms' => $this->tiempoPromedioImpresionMs($agenteIds),
-            'uptime_por_agente' => $agentesParaUptime->map(fn ($a) => $this->uptimeAgente($a))->all(),
-            'distribucion_errores' => $this->distribucionErrores($agenteIds),
-            'volumen_por_hora' => $this->volumenPorHora($agenteIds),
-            'volumen_por_dia_semana' => $this->volumenPorDiaSemana($agenteIds),
+            'success_rate_by_printer' => $this->tasaExitoPorImpresora($agenteIds),
+            'average_print_time_ms' => $this->tiempoPromedioImpresionMs($agenteIds),
+            'uptime_by_agent' => $agentesParaUptime->map(fn ($a) => $this->uptimeAgente($a))->all(),
+            'error_distribution' => $this->distribucionErrores($agenteIds),
+            'volume_by_hour' => $this->volumenPorHora($agenteIds),
+            'volume_by_day_of_week' => $this->volumenPorDiaSemana($agenteIds),
         ];
 
         EstadisticaAgregada::withoutGlobalScopes()->updateOrCreate(
@@ -83,11 +86,11 @@ class CalcularEstadisticas extends Command
             $total = $impresos + $fallos;
 
             $resultado[] = [
-                'impresora_id' => $impresoraId,
+                'printer_id' => $impresoraId,
                 'alias' => $alias[$impresoraId] ?? null,
-                'impresos' => $impresos,
-                'fallos' => $fallos,
-                'tasa_exito' => $total > 0 ? round($impresos / $total, 4) : null,
+                'printed' => $impresos,
+                'failed' => $fallos,
+                'success_rate' => $total > 0 ? round($impresos / $total, 4) : null,
             ];
         }
 
@@ -115,11 +118,11 @@ class CalcularEstadisticas extends Command
 
         return TrabajoImpresion::whereIn('agente_id', $agenteIds)
             ->where('estado', 'fallo_definitivo')
-            ->selectRaw("COALESCE(error_mensaje, '(sin mensaje)') as error_mensaje, COUNT(*) as cantidad")
+            ->selectRaw("COALESCE(error_mensaje, '(no message)') as error_mensaje, COUNT(*) as cantidad")
             ->groupBy('error_mensaje')
             ->orderByDesc('cantidad')
             ->get()
-            ->map(fn ($f) => ['error_mensaje' => $f->error_mensaje, 'cantidad' => (int) $f->cantidad])
+            ->map(fn ($f) => ['error_message' => $f->error_mensaje, 'count' => (int) $f->cantidad])
             ->all();
     }
 
@@ -134,7 +137,7 @@ class CalcularEstadisticas extends Command
             ->groupBy('hora')
             ->orderBy('hora')
             ->get()
-            ->map(fn ($f) => ['hora' => $f->hora, 'cantidad' => (int) $f->cantidad])
+            ->map(fn ($f) => ['hour' => $f->hora, 'count' => (int) $f->cantidad])
             ->all();
     }
 
@@ -150,7 +153,7 @@ class CalcularEstadisticas extends Command
             ->groupBy('dia')
             ->orderBy('dia')
             ->get()
-            ->map(fn ($f) => ['dia' => $f->dia, 'cantidad' => (int) $f->cantidad])
+            ->map(fn ($f) => ['day' => $f->dia, 'count' => (int) $f->cantidad])
             ->all();
     }
 
@@ -159,8 +162,8 @@ class CalcularEstadisticas extends Command
         $ahora = now();
 
         return [
-            'agente_id' => $agente->id,
-            'instalacion_id' => $agente->instalacion_id,
+            'agent_id' => $agente->id,
+            'installation_id' => $agente->instalacion_id,
             'uptime_24h' => $this->calcularUptime($agente, $ahora->copy()->subDay(), $ahora),
             'uptime_7d' => $this->calcularUptime($agente, $ahora->copy()->subDays(7), $ahora),
             'uptime_30d' => $this->calcularUptime($agente, $ahora->copy()->subDays(30), $ahora),
@@ -169,7 +172,7 @@ class CalcularEstadisticas extends Command
 
     /**
      * Reconstruye el timeline online/offline dentro de [desde, hasta] a
-     * partir de los eventos agente.online/agente.offline (que solo se
+     * partir de los eventos agent.online/agent.offline (que solo se
      * registran en una transicion real, nunca en cada heartbeat) y suma
      * cuanto tiempo estuvo online. El estado justo antes del primer evento
      * de la ventana es, por definicion, el opuesto de ese evento.
@@ -178,7 +181,7 @@ class CalcularEstadisticas extends Command
     {
         $eventos = Evento::withoutGlobalScopes()
             ->where('agente_id', $agente->id)
-            ->whereIn('tipo_evento', ['agente.online', 'agente.offline'])
+            ->whereIn('tipo_evento', [EventType::AGENT_ONLINE, EventType::AGENT_OFFLINE])
             ->whereBetween('creado_en', [$desde, $hasta])
             ->orderBy('creado_en')
             ->get();
@@ -189,7 +192,7 @@ class CalcularEstadisticas extends Command
 
         $segundosOnline = 0;
         $cursor = $desde;
-        $estadoActual = $eventos->first()->tipo_evento === 'agente.offline' ? 'online' : 'offline';
+        $estadoActual = $eventos->first()->tipo_evento === EventType::AGENT_OFFLINE ? 'online' : 'offline';
 
         foreach ($eventos as $evento) {
             if ($estadoActual === 'online') {
@@ -198,7 +201,7 @@ class CalcularEstadisticas extends Command
                 $segundosOnline += $evento->creado_en->diffInSeconds($cursor, absolute: true);
             }
             $cursor = $evento->creado_en;
-            $estadoActual = $evento->tipo_evento === 'agente.online' ? 'online' : 'offline';
+            $estadoActual = $evento->tipo_evento === EventType::AGENT_ONLINE ? 'online' : 'offline';
         }
 
         if ($estadoActual === 'online') {

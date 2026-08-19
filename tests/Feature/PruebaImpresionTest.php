@@ -21,9 +21,9 @@ class PruebaImpresionTest extends TestCase
 
         $headers = ['Authorization' => 'Bearer '.$empresa->createToken('t', ['tenant'])->plainTextToken];
 
-        $respuesta = $this->postJson("/v1/agentes/{$agente->id}/impresoras/{$impresora->id}/prueba", [], $headers);
+        $respuesta = $this->postJson("/v1/agents/{$agente->id}/printers/{$impresora->id}/test-print", [], $headers);
 
-        $respuesta->assertStatus(202)->assertJsonStructure(['data' => ['job_id_externo', 'mensaje']]);
+        $respuesta->assertStatus(202)->assertJsonStructure(['data' => ['external_job_id', 'message']]);
         $this->assertDatabaseHas('comandos_prueba', [
             'agente_id' => $agente->id, 'impresora_id' => $impresora->id, 'target' => 'receipt', 'format' => 'escpos', 'estado' => 'pendiente',
         ]);
@@ -36,7 +36,7 @@ class PruebaImpresionTest extends TestCase
         $impresora = Impresora::create(['agente_id' => $agente->id, 'alias' => 'wristband', 'tipo' => 'usb', 'protocolo' => 'tspl', 'estado_heartbeat' => 'online', 'actualizado_en' => now()]);
 
         $headers = ['Authorization' => 'Bearer '.$empresa->createToken('t', ['tenant'])->plainTextToken];
-        $this->postJson("/v1/agentes/{$agente->id}/impresoras/{$impresora->id}/prueba", [], $headers)->assertStatus(202);
+        $this->postJson("/v1/agents/{$agente->id}/printers/{$impresora->id}/test-print", [], $headers)->assertStatus(202);
 
         $this->assertDatabaseHas('comandos_prueba', ['impresora_id' => $impresora->id, 'format' => 'tspl']);
     }
@@ -50,7 +50,7 @@ class PruebaImpresionTest extends TestCase
 
         $headers = ['Authorization' => 'Bearer '.$empresaA->createToken('t', ['tenant'])->plainTextToken];
 
-        $this->postJson("/v1/agentes/{$agenteB->id}/impresoras/{$impresoraB->id}/prueba", [], $headers)->assertNotFound();
+        $this->postJson("/v1/agents/{$agenteB->id}/printers/{$impresoraB->id}/test-print", [], $headers)->assertNotFound();
     }
 
     public function test_el_heartbeat_entrega_el_comando_pendiente_y_lo_marca_entregado(): void
@@ -61,15 +61,15 @@ class PruebaImpresionTest extends TestCase
 
         $comando = PruebaImpresionController::crearComando($agente, $impresora);
 
-        $respuesta = $this->postJson('/agente/heartbeat', [], ['Authorization' => 'Bearer plaintoken']);
+        $respuesta = $this->postJson('/agent/heartbeat', [], ['Authorization' => 'Bearer plaintoken']);
 
         $respuesta->assertOk();
-        $this->assertCount(1, $respuesta->json('comandos_pendientes'));
-        $this->assertSame($comando->job_id_externo, $respuesta->json('comandos_pendientes.0.id'));
+        $this->assertCount(1, $respuesta->json('pending_commands'));
+        $this->assertSame($comando->job_id_externo, $respuesta->json('pending_commands.0.id'));
         $this->assertDatabaseHas('comandos_prueba', ['id' => $comando->id, 'estado' => 'entregado']);
 
         // Un segundo heartbeat no lo debe volver a entregar.
-        $segunda = $this->postJson('/agente/heartbeat', [], ['Authorization' => 'Bearer plaintoken']);
-        $this->assertCount(0, $segunda->json('comandos_pendientes'));
+        $segunda = $this->postJson('/agent/heartbeat', [], ['Authorization' => 'Bearer plaintoken']);
+        $this->assertCount(0, $segunda->json('pending_commands'));
     }
 }

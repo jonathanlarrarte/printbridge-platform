@@ -41,7 +41,7 @@ class ResumenAdminController extends Controller
             ->groupBy('fecha')
             ->orderBy('fecha')
             ->get()
-            ->map(fn ($f) => ['fecha' => $f->fecha, 'cantidad' => (int) $f->cantidad]);
+            ->map(fn ($f) => ['date' => $f->fecha, 'count' => (int) $f->cantidad]);
 
         // Ver nota en EmpresaAdminController@index: sin withoutGlobalScopes()
         // en el subquery, BelongsToTenant (Agente) cuenta solo los agentes
@@ -51,23 +51,23 @@ class ResumenAdminController extends Controller
             ->orderByDesc('agentes_count')
             ->limit(5)
             ->get(['id', 'nombre', 'codigo', 'activo'])
-            ->map(fn ($e) => ['id' => $e->id, 'nombre' => $e->nombre, 'codigo' => $e->codigo, 'activo' => $e->activo, 'agentes_count' => $e->agentes_count]);
+            ->map(fn ($e) => ['id' => $e->id, 'name' => $e->nombre, 'code' => $e->codigo, 'active' => $e->activo, 'agents_count' => $e->agentes_count]);
 
         return response()->json(['data' => [
-            'empresas' => [
+            'companies' => [
                 'total' => $totalEmpresas,
-                'activas' => $empresasActivas,
-                'pendientes' => $totalEmpresas - $empresasActivas,
+                'active' => $empresasActivas,
+                'pending' => $totalEmpresas - $empresasActivas,
             ],
-            'agentes' => ['total' => $totalAgentes, 'online' => $agentesOnline],
-            'impresoras' => ['total' => $totalImpresoras, 'online' => $impresorasOnline],
-            'trabajos_24h' => [
-                'impresos' => $impresos24h,
-                'fallidos' => $fallidos24h,
-                'tasa_exito' => ($impresos24h + $fallidos24h) > 0 ? round($impresos24h / ($impresos24h + $fallidos24h), 4) : null,
+            'agents' => ['total' => $totalAgentes, 'online' => $agentesOnline],
+            'printers' => ['total' => $totalImpresoras, 'online' => $impresorasOnline],
+            'jobs_24h' => [
+                'printed' => $impresos24h,
+                'failed' => $fallidos24h,
+                'success_rate' => ($impresos24h + $fallidos24h) > 0 ? round($impresos24h / ($impresos24h + $fallidos24h), 4) : null,
             ],
-            'volumen_por_dia' => $volumenPorDia,
-            'top_empresas' => $topEmpresas,
+            'volume_by_day' => $volumenPorDia,
+            'top_companies' => $topEmpresas,
         ]]);
     }
 }

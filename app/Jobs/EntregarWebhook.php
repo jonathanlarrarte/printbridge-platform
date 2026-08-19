@@ -41,12 +41,12 @@ class EntregarWebhook implements ShouldQueue
         }
 
         $payload = [
-            'tipo_evento' => $evento->tipo_evento,
-            'evento_id' => $evento->id,
-            'trabajo_id' => $evento->trabajo_id,
-            'agente_id' => $evento->agente_id,
-            'creado_en' => $evento->creado_en?->toIso8601String(),
-            'datos' => $evento->payload,
+            'event_type' => $evento->tipo_evento,
+            'event_id' => $evento->id,
+            'job_id' => $evento->trabajo_id,
+            'agent_id' => $evento->agente_id,
+            'created_at' => $evento->creado_en?->toIso8601String(),
+            'payload' => $evento->payload,
         ];
         $payloadJson = json_encode($payload);
         $firma = hash_hmac('sha256', $payloadJson, $webhook->secreto);

@@ -66,7 +66,7 @@ async function copiar(texto, etiqueta) {
       <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 class="mb-3 text-sm font-semibold text-slate-700">Datos generales</h2>
         <dl class="space-y-2 text-sm">
-          <div class="flex justify-between"><dt class="text-slate-500">Nombre</dt><dd>{{ empresa.nombre }}</dd></div>
+          <div class="flex justify-between"><dt class="text-slate-500">Nombre</dt><dd>{{ empresa.name }}</dd></div>
           <div class="flex justify-between"><dt class="text-slate-500">Plan</dt><dd>{{ empresa.plan }}</dd></div>
         </dl>
       </section>
@@ -74,14 +74,14 @@ async function copiar(texto, etiqueta) {
       <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 class="mb-1 text-sm font-semibold text-slate-700">Código de instalación de agentes</h2>
         <p class="mb-3 text-sm text-slate-500">
-          Usalo como <code class="rounded bg-slate-100 px-1 py-0.5">cliente_codigo</code> cuando instales
+          Usalo como <code class="rounded bg-slate-100 px-1 py-0.5">client_code</code> cuando instales
           un agente PrintBridge nuevo — así queda vinculado a esta empresa automáticamente.
         </p>
         <div class="flex items-center gap-2">
-          <code class="flex-1 rounded-md bg-slate-100 px-3 py-2 text-sm">{{ empresa.codigo }}</code>
+          <code class="flex-1 rounded-md bg-slate-100 px-3 py-2 text-sm">{{ empresa.code }}</code>
           <button
             class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50"
-            @click="copiar(empresa.codigo, 'codigo')"
+            @click="copiar(empresa.code, 'codigo')"
           >
             {{ copiado === 'codigo' ? 'Copiado' : 'Copiar' }}
           </button>
@@ -121,8 +121,8 @@ async function copiar(texto, etiqueta) {
           </thead>
           <tbody class="divide-y divide-slate-100">
             <tr v-for="k in apiKeys" :key="k.id">
-              <td class="py-2 font-mono text-xs">{{ k.nombre }}</td>
-              <td class="py-2 text-slate-500">{{ k.ultimo_uso ? new Date(k.ultimo_uso).toLocaleString() : 'nunca' }}</td>
+              <td class="py-2 font-mono text-xs">{{ k.name }}</td>
+              <td class="py-2 text-slate-500">{{ k.last_used_at ? new Date(k.last_used_at).toLocaleString() : 'nunca' }}</td>
               <td class="py-2 text-right">
                 <button class="text-xs text-red-600 hover:text-red-800" @click="borrarApiKey(k.id)">Revocar</button>
               </td>

@@ -27,7 +27,7 @@ const links = computed(() => [
   { name: 'webhooks', label: 'Webhooks' },
   { name: 'documentacion', label: 'Docs' },
   { name: 'empresa', label: 'Empresa' },
-  ...(sesion.value?.usuario?.es_super_admin ? [{ name: 'admin-overview', label: 'Admin' }] : []),
+  ...(sesion.value?.usuario?.is_super_admin ? [{ name: 'admin-overview', label: 'Admin' }] : []),
 ]);
 
 async function salir() {
@@ -60,7 +60,7 @@ async function salir() {
           </nav>
         </div>
         <div class="flex items-center gap-4 text-sm text-slate-300">
-          <span v-if="sesion">{{ sesion.empresa.nombre }} · {{ sesion.usuario.nombre }}</span>
+          <span v-if="sesion">{{ sesion.empresa.name }} · {{ sesion.usuario.name }}</span>
           <button class="rounded-md bg-slate-800 px-3 py-1.5 font-medium hover:bg-slate-700" @click="salir">
             Salir
           </button>

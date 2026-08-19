@@ -16,12 +16,12 @@ class WebhookEntregaResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'evento_id' => $this->evento_id,
-            'intento' => $this->intento,
-            'status_http' => $this->status_http,
-            'respuesta_resumen' => $this->respuesta_resumen,
-            'entregado_en' => $this->entregado_en,
-            'exitosa' => ! is_null($this->entregado_en),
+            'event_id' => $this->evento_id,
+            'attempt' => $this->intento,
+            'http_status' => $this->status_http,
+            'response_summary' => $this->respuesta_resumen,
+            'delivered_at' => $this->entregado_en,
+            'successful' => ! is_null($this->entregado_en),
         ];
     }
 }

@@ -31,25 +31,25 @@ class EmpresaAdminController extends Controller
 
         return response()->json(['data' => $empresas->map(fn ($e) => [
             'id' => $e->id,
-            'nombre' => $e->nombre,
-            'codigo' => $e->codigo,
+            'name' => $e->nombre,
+            'code' => $e->codigo,
             'plan' => $e->plan,
-            'activo' => $e->activo,
-            'agentes_count' => $e->agentes_count,
-            'creado_en' => $e->created_at,
+            'active' => $e->activo,
+            'agents_count' => $e->agentes_count,
+            'created_at' => $e->created_at,
         ])]);
     }
 
     public function store(Request $request)
     {
         $datos = $request->validate([
-            'nombre' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'plan' => ['nullable', 'string', 'max:50'],
         ]);
 
         $empresa = Empresa::create([
-            'nombre' => $datos['nombre'],
-            'codigo' => Empresa::generarCodigoUnico($datos['nombre']),
+            'nombre' => $datos['name'],
+            'codigo' => Empresa::generarCodigoUnico($datos['name']),
             'plan' => $datos['plan'] ?? 'piloto',
             // Alta manual por el super admin: activa de una, a diferencia
             // del signup self-service (que arranca inactivo).
@@ -57,8 +57,8 @@ class EmpresaAdminController extends Controller
         ]);
 
         return response()->json(['data' => [
-            'id' => $empresa->id, 'nombre' => $empresa->nombre, 'codigo' => $empresa->codigo,
-            'plan' => $empresa->plan, 'activo' => $empresa->activo, 'creado_en' => $empresa->created_at,
+            'id' => $empresa->id, 'name' => $empresa->nombre, 'code' => $empresa->codigo,
+            'plan' => $empresa->plan, 'active' => $empresa->activo, 'created_at' => $empresa->created_at,
         ]], 201);
     }
 
@@ -70,15 +70,15 @@ class EmpresaAdminController extends Controller
             ->where('empresa_id', $id)->whereNull('agente_id')->first();
 
         return response()->json(['data' => [
-            'empresa' => [
-                'id' => $empresa->id, 'nombre' => $empresa->nombre, 'codigo' => $empresa->codigo,
-                'plan' => $empresa->plan, 'activo' => $empresa->activo, 'creado_en' => $empresa->created_at,
+            'company' => [
+                'id' => $empresa->id, 'name' => $empresa->nombre, 'code' => $empresa->codigo,
+                'plan' => $empresa->plan, 'active' => $empresa->activo, 'created_at' => $empresa->created_at,
             ],
-            'agentes' => AgenteResource::collection($agentes),
-            'estadisticas' => $estadisticas?->datos,
-            'estadisticas_calculado_en' => $estadisticas?->calculado_en,
+            'agents' => AgenteResource::collection($agentes),
+            'stats' => $estadisticas?->datos,
+            'stats_calculated_at' => $estadisticas?->calculado_en,
             'api_keys' => $empresa->tokens()->orderByDesc('id')->get()->map(fn ($t) => [
-                'id' => $t->id, 'nombre' => $t->name, 'ultimo_uso' => $t->last_used_at, 'creado_en' => $t->created_at,
+                'id' => $t->id, 'name' => $t->name, 'last_used_at' => $t->last_used_at, 'created_at' => $t->created_at,
             ]),
         ]]);
     }
@@ -88,15 +88,18 @@ class EmpresaAdminController extends Controller
         $empresa = Empresa::withoutGlobalScopes()->findOrFail($id);
 
         $datos = $request->validate([
-            'activo' => ['sometimes', 'boolean'],
+            'active' => ['sometimes', 'boolean'],
             'plan' => ['sometimes', 'string', 'max:50'],
         ]);
 
-        $empresa->update($datos);
+        $empresa->update([
+            'activo' => $datos['active'] ?? $empresa->activo,
+            'plan' => $datos['plan'] ?? $empresa->plan,
+        ]);
 
         return response()->json(['data' => [
-            'id' => $empresa->id, 'nombre' => $empresa->nombre, 'codigo' => $empresa->codigo,
-            'plan' => $empresa->plan, 'activo' => $empresa->activo,
+            'id' => $empresa->id, 'name' => $empresa->nombre, 'code' => $empresa->codigo,
+            'plan' => $empresa->plan, 'active' => $empresa->activo,
         ]]);
     }
 }

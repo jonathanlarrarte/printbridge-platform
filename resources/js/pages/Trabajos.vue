@@ -7,13 +7,13 @@ const cargando = ref(true);
 const error = ref('');
 const filtroEstado = ref('');
 
-const ESTADOS = ['pendiente', 'en_cola', 'imprimiendo', 'impreso', 'fallo_definitivo'];
+const ESTADOS = ['pending', 'queued', 'printing', 'printed', 'failed'];
 
 async function cargar() {
   cargando.value = true;
   error.value = '';
   try {
-    const respuesta = await api.trabajos({ estado: filtroEstado.value || undefined });
+    const respuesta = await api.trabajos({ status: filtroEstado.value || undefined });
     trabajos.value = respuesta.data;
   } catch {
     error.value = 'No se pudieron cargar los trabajos.';
@@ -27,9 +27,9 @@ watch(filtroEstado, cargar);
 
 function badge(estado) {
   return {
-    impreso: 'bg-green-100 text-green-700',
-    fallo_definitivo: 'bg-red-100 text-red-700',
-    imprimiendo: 'bg-amber-100 text-amber-700',
+    printed: 'bg-green-100 text-green-700',
+    failed: 'bg-red-100 text-red-700',
+    printing: 'bg-amber-100 text-amber-700',
   }[estado] || 'bg-slate-100 text-slate-600';
 }
 </script>
@@ -61,14 +61,14 @@ function badge(estado) {
       </thead>
       <tbody class="divide-y divide-slate-100">
         <tr v-for="t in trabajos" :key="t.id">
-          <td class="px-4 py-3 font-mono text-xs">{{ t.job_id_externo }}</td>
-          <td class="px-4 py-3">#{{ t.agente_id }}</td>
+          <td class="px-4 py-3 font-mono text-xs">{{ t.external_job_id }}</td>
+          <td class="px-4 py-3">#{{ t.agent_id }}</td>
           <td class="px-4 py-3">{{ t.target }}</td>
           <td class="px-4 py-3">
-            <span class="rounded-full px-2 py-0.5 text-xs" :class="badge(t.estado)">{{ t.estado }}</span>
+            <span class="rounded-full px-2 py-0.5 text-xs" :class="badge(t.status)">{{ t.status }}</span>
           </td>
-          <td class="px-4 py-3">{{ t.duracion_ms ? `${t.duracion_ms} ms` : '—' }}</td>
-          <td class="px-4 py-3 text-slate-500">{{ new Date(t.creado_en).toLocaleString() }}</td>
+          <td class="px-4 py-3">{{ t.duration_ms ? `${t.duration_ms} ms` : '—' }}</td>
+          <td class="px-4 py-3 text-slate-500">{{ new Date(t.created_at).toLocaleString() }}</td>
         </tr>
       </tbody>
     </table>

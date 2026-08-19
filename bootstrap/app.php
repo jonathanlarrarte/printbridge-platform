@@ -35,7 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // "login" inexistente.
         $exceptions->render(function (AuthenticationException $e, $request) {
             if ($request->is('v1/*') || $request->is('agente/*')) {
-                return response()->json(['error' => 'no autenticado'], 401);
+                return response()->json(['error' => 'unauthenticated'], 401);
             }
         });
 

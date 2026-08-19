@@ -13,8 +13,8 @@ async function enviar() {
   error.value = '';
   cargando.value = true;
   try {
-    const { token, usuario, empresa } = await api.login(email.value, password.value);
-    guardarSesion(token, usuario, empresa);
+    const { token, user, company } = await api.login(email.value, password.value);
+    guardarSesion(token, user, company);
     router.push({ name: 'agentes' });
   } catch (e) {
     if (e.status === 401) {

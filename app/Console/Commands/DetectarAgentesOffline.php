@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Agente;
 use App\Services\EventosPlataforma;
+use App\Support\EventType;
 use Illuminate\Console\Command;
 
 /**
@@ -33,7 +34,7 @@ class DetectarAgentesOffline extends Command
 
         foreach ($agentes as $agente) {
             $agente->update(['estado' => 'offline']);
-            EventosPlataforma::registrarTransicionAgente($agente, 'agente.offline');
+            EventosPlataforma::registrarTransicionAgente($agente, EventType::AGENT_OFFLINE);
             $this->info("Agente {$agente->instalacion_id} marcado offline (sin heartbeat desde {$agente->ultimo_heartbeat}).");
         }
     }

@@ -8,39 +8,46 @@ use App\Models\ComandoPrueba;
 use App\Models\Empresa;
 use App\Models\Impresora;
 use App\Services\EventosPlataforma;
+use App\Support\EventType;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
+/**
+ * Endpoints privados agente -> plataforma (seccion 6.1 del doc). El campo
+ * de entrada/salida (JSON) esta en ingles a proposito (superficie publica
+ * de la API); los nombres internos (metodos, variables, columnas) siguen
+ * en espanol -- ver app/Support/JobStatus.php y EventType.php.
+ */
 class AgenteIngestaController extends Controller
 {
     /**
-     * POST /agente/registrar — bootstrap de identidad. No usa agente.auth
+     * POST /agent/register — bootstrap de identidad. No usa agente.auth
      * (todavia no existe el token): se valida con el codigo de cliente
      * capturado en el instalador del agente.
      */
     public function registrar(Request $request)
     {
         $datos = $request->validate([
-            'instalacion_id' => ['required', 'string', 'max:255'],
-            'cliente_codigo' => ['required', 'string', 'max:255'],
-            'nombre_descriptivo' => ['nullable', 'string', 'max:255'],
-            'version_agente' => ['nullable', 'string', 'max:50'],
+            'installation_id' => ['required', 'string', 'max:255'],
+            'client_code' => ['required', 'string', 'max:255'],
+            'display_name' => ['nullable', 'string', 'max:255'],
+            'agent_version' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $empresa = Empresa::where('codigo', $datos['cliente_codigo'])->first();
+        $empresa = Empresa::where('codigo', $datos['client_code'])->first();
 
         if (! $empresa) {
-            return response()->json(['error' => 'codigo de cliente no reconocido'], 404);
+            return response()->json(['error' => 'client code not recognized'], 404);
         }
 
         if (! $empresa->activo) {
-            return response()->json(['error' => 'esta empresa todavia no fue activada por un administrador'], 403);
+            return response()->json(['error' => 'this company has not been activated by an administrator yet'], 403);
         }
 
-        $agente = Agente::withoutGlobalScopes()->where('instalacion_id', $datos['instalacion_id'])->first();
+        $agente = Agente::withoutGlobalScopes()->where('instalacion_id', $datos['installation_id'])->first();
 
         if ($agente && $agente->empresa_id !== $empresa->id) {
-            return response()->json(['error' => 'esta instalacion ya esta registrada en otra empresa'], 409);
+            return response()->json(['error' => 'this installation is already registered to another company'], 409);
         }
 
         $token = bin2hex(random_bytes(32));
@@ -48,16 +55,16 @@ class AgenteIngestaController extends Controller
 
         if ($agente) {
             $agente->update([
-                'nombre_descriptivo' => $datos['nombre_descriptivo'] ?? $agente->nombre_descriptivo,
-                'version_agente' => $datos['version_agente'] ?? $agente->version_agente,
+                'nombre_descriptivo' => $datos['display_name'] ?? $agente->nombre_descriptivo,
+                'version_agente' => $datos['agent_version'] ?? $agente->version_agente,
                 'token_hash' => $tokenHash,
             ]);
         } else {
             $agente = Agente::create([
                 'empresa_id' => $empresa->id,
-                'instalacion_id' => $datos['instalacion_id'],
-                'nombre_descriptivo' => $datos['nombre_descriptivo'] ?? null,
-                'version_agente' => $datos['version_agente'] ?? null,
+                'instalacion_id' => $datos['installation_id'],
+                'nombre_descriptivo' => $datos['display_name'] ?? null,
+                'version_agente' => $datos['agent_version'] ?? null,
                 'token_hash' => $tokenHash,
                 'estado' => 'offline',
                 'creado_en' => now(),
@@ -65,27 +72,27 @@ class AgenteIngestaController extends Controller
         }
 
         return response()->json([
-            'agente_id' => $agente->id,
+            'agent_id' => $agente->id,
             'token' => $token,
         ]);
     }
 
     /**
-     * POST /agente/heartbeat — protegido por agente.auth.
+     * POST /agent/heartbeat — protegido por agente.auth.
      */
     public function heartbeat(Request $request)
     {
         $agente = $request->attributes->get('agente');
 
         $datos = $request->validate([
-            'version_agente' => ['nullable', 'string', 'max:50'],
-            'impresoras' => ['nullable', 'array'],
-            'impresoras.*.online' => ['required', 'boolean'],
-            'impresoras.*.tipo' => ['nullable', 'string', 'max:50'],
-            'impresoras.*.ip' => ['nullable', 'string', 'max:100'],
-            'impresoras.*.puerto' => ['nullable', 'integer'],
-            'impresoras.*.nombre_sistema' => ['nullable', 'string', 'max:255'],
-            'impresoras.*.protocolo' => ['nullable', 'string', 'max:50'],
+            'agent_version' => ['nullable', 'string', 'max:50'],
+            'printers' => ['nullable', 'array'],
+            'printers.*.online' => ['required', 'boolean'],
+            'printers.*.type' => ['nullable', 'string', 'max:50'],
+            'printers.*.ip' => ['nullable', 'string', 'max:100'],
+            'printers.*.port' => ['nullable', 'integer'],
+            'printers.*.system_name' => ['nullable', 'string', 'max:255'],
+            'printers.*.protocol' => ['nullable', 'string', 'max:50'],
         ]);
 
         $estabaOffline = $agente->estado !== 'online';
@@ -93,22 +100,22 @@ class AgenteIngestaController extends Controller
         $agente->update([
             'estado' => 'online',
             'ultimo_heartbeat' => now(),
-            'version_agente' => $datos['version_agente'] ?? $agente->version_agente,
+            'version_agente' => $datos['agent_version'] ?? $agente->version_agente,
         ]);
 
         if ($estabaOffline) {
-            EventosPlataforma::registrarTransicionAgente($agente, 'agente.online');
+            EventosPlataforma::registrarTransicionAgente($agente, EventType::AGENT_ONLINE);
         }
 
-        foreach ($datos['impresoras'] ?? [] as $alias => $info) {
+        foreach ($datos['printers'] ?? [] as $alias => $info) {
             Impresora::updateOrCreate(
                 ['agente_id' => $agente->id, 'alias' => $alias],
                 [
-                    'tipo' => $info['tipo'] ?? null,
+                    'tipo' => $info['type'] ?? null,
                     'ip' => $info['ip'] ?? null,
-                    'puerto' => $info['puerto'] ?? null,
-                    'nombre_sistema' => $info['nombre_sistema'] ?? null,
-                    'protocolo' => $info['protocolo'] ?? null,
+                    'puerto' => $info['port'] ?? null,
+                    'nombre_sistema' => $info['system_name'] ?? null,
+                    'protocolo' => $info['protocol'] ?? null,
                     'estado_heartbeat' => $info['online'] ? 'online' : 'offline',
                     'actualizado_en' => now(),
                 ]
@@ -127,7 +134,7 @@ class AgenteIngestaController extends Controller
 
         return response()->json([
             'ok' => true,
-            'comandos_pendientes' => $comandos->map(fn ($c) => [
+            'pending_commands' => $comandos->map(fn ($c) => [
                 'id' => $c->job_id_externo,
                 'target' => $c->target,
                 'format' => $c->format,
@@ -137,7 +144,7 @@ class AgenteIngestaController extends Controller
     }
 
     /**
-     * POST /agente/eventos — protegido por agente.auth. Responde 202 de
+     * POST /agent/events — protegido por agente.auth. Responde 202 de
      * inmediato y encola el procesamiento pesado (seccion 7 del doc).
      */
     public function eventos(Request $request)
@@ -145,18 +152,23 @@ class AgenteIngestaController extends Controller
         $agente = $request->attributes->get('agente');
 
         $datos = $request->validate([
-            'tipo_evento' => ['required', Rule::in([
-                'trabajo.creado', 'trabajo.imprimiendo', 'trabajo.impreso', 'trabajo.fallo_definitivo',
-            ])],
-            'job_id_externo' => ['required', 'string', 'max:255'],
+            'event_type' => ['required', Rule::in(EventType::JOB_EVENTS)],
+            'external_job_id' => ['required', 'string', 'max:255'],
             'target' => ['required', 'string', 'max:255'],
             'format' => ['nullable', 'string', 'max:50'],
-            'error_mensaje' => ['nullable', 'string'],
-            'duracion_ms' => ['nullable', 'integer'],
+            'error_message' => ['nullable', 'string'],
+            'duration_ms' => ['nullable', 'integer'],
         ]);
 
-        ProcesarEventoAgente::dispatch($agente->id, $datos);
+        ProcesarEventoAgente::dispatch($agente->id, [
+            'tipo_evento' => $datos['event_type'],
+            'job_id_externo' => $datos['external_job_id'],
+            'target' => $datos['target'],
+            'format' => $datos['format'] ?? null,
+            'error_mensaje' => $datos['error_message'] ?? null,
+            'duracion_ms' => $datos['duration_ms'] ?? null,
+        ]);
 
-        return response()->json(['status' => 'aceptado'], 202);
+        return response()->json(['status' => 'accepted'], 202);
     }
 }

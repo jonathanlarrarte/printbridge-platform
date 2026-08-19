@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 class PruebaImpresionController extends Controller
 {
     /**
-     * POST /v1/agentes/{agenteId}/impresoras/{impresoraId}/prueba -- deja
+     * POST /v1/agents/{agenteId}/printers/{impresoraId}/test-print -- deja
      * un comando pendiente que el agente recoge en su proximo heartbeat
      * (cada 15-30s) y mete en su cola local igual que un trabajo real
      * (main/queue.js -> encolar()), asi que despues sigue el mismo camino
@@ -28,8 +28,8 @@ class PruebaImpresionController extends Controller
         $comando = $this->crearComando($agente, $impresora);
 
         return response()->json(['data' => [
-            'job_id_externo' => $comando->job_id_externo,
-            'mensaje' => 'Encolado. El agente lo va a imprimir en su proximo heartbeat (hasta 30s).',
+            'external_job_id' => $comando->job_id_externo,
+            'message' => 'Queued. The agent will print it on its next heartbeat (up to 30s).',
         ]], 202);
     }
 

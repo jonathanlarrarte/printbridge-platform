@@ -10,7 +10,7 @@ use App\Models\Agente;
 class AgenteController extends Controller
 {
     /**
-     * GET /v1/agentes — la lista ya viene filtrada por empresa gracias al
+     * GET /v1/agents — la lista ya viene filtrada por empresa gracias al
      * global scope BelongsToTenant en el modelo Agente.
      */
     public function index()

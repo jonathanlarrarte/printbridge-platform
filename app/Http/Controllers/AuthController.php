@@ -24,30 +24,30 @@ class AuthController extends Controller
     public function signup(Request $request)
     {
         $datos = $request->validate([
-            'nombre_empresa' => ['required', 'string', 'max:255'],
-            'nombre_usuario' => ['required', 'string', 'max:255'],
+            'company_name' => ['required', 'string', 'max:255'],
+            'user_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:usuarios,email'],
             'password' => ['required', 'string', 'min:8'],
         ]);
 
         $empresa = Empresa::create([
-            'nombre' => $datos['nombre_empresa'],
-            'codigo' => Empresa::generarCodigoUnico($datos['nombre_empresa']),
+            'nombre' => $datos['company_name'],
+            'codigo' => Empresa::generarCodigoUnico($datos['company_name']),
             'plan' => 'piloto',
             'activo' => false,
         ]);
 
         Usuario::create([
             'empresa_id' => $empresa->id,
-            'nombre' => $datos['nombre_usuario'],
+            'nombre' => $datos['user_name'],
             'email' => $datos['email'],
             'rol' => 'admin',
             'password' => Hash::make($datos['password']),
         ]);
 
         return response()->json([
-            'mensaje' => 'Cuenta creada. Un administrador de la plataforma tiene que activarla antes de que puedas ingresar.',
-            'empresa' => ['id' => $empresa->id, 'nombre' => $empresa->nombre, 'codigo' => $empresa->codigo],
+            'message' => 'Account created. A platform administrator needs to activate it before you can sign in.',
+            'company' => ['id' => $empresa->id, 'name' => $empresa->nombre, 'code' => $empresa->codigo],
         ], 201);
     }
 
@@ -61,11 +61,11 @@ class AuthController extends Controller
         $usuario = Usuario::withoutGlobalScopes()->with('empresa')->where('email', $datos['email'])->first();
 
         if (! $usuario || ! Hash::check($datos['password'], $usuario->password)) {
-            return response()->json(['error' => 'credenciales invalidas'], 401);
+            return response()->json(['error' => 'invalid credentials'], 401);
         }
 
         if (! $usuario->empresa->activo) {
-            return response()->json(['error' => 'Tu empresa todavia no fue activada por un administrador.'], 403);
+            return response()->json(['error' => 'Your company has not been activated by an administrator yet.'], 403);
         }
 
         $empresa = $usuario->empresa;
@@ -79,14 +79,14 @@ class AuthController extends Controller
 
         return response()->json([
             'token' => $token,
-            'usuario' => [
+            'user' => [
                 'id' => $usuario->id,
-                'nombre' => $usuario->nombre,
+                'name' => $usuario->nombre,
                 'email' => $usuario->email,
-                'rol' => $usuario->rol,
-                'es_super_admin' => $usuario->es_super_admin,
+                'role' => $usuario->rol,
+                'is_super_admin' => $usuario->es_super_admin,
             ],
-            'empresa' => ['id' => $empresa->id, 'nombre' => $empresa->nombre, 'codigo' => $empresa->codigo],
+            'company' => ['id' => $empresa->id, 'name' => $empresa->nombre, 'code' => $empresa->codigo],
         ]);
     }
 

@@ -17,9 +17,9 @@ class WebhookResource extends JsonResource
         return [
             'id' => $this->id,
             'url' => $this->url,
-            'eventos_suscritos' => $this->eventos_suscritos,
-            'activo' => $this->activo,
-            'creado_en' => $this->creado_en,
+            'subscribed_events' => $this->eventos_suscritos,
+            'active' => $this->activo,
+            'created_at' => $this->creado_en,
             // El secreto solo se devuelve una vez, en la respuesta de creacion
             // (ver WebhookController::store) -- nunca en index/show.
         ];

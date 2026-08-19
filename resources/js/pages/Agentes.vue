@@ -26,9 +26,9 @@ function formatoFecha(f) {
 
 function badgeUltimoTrabajo(ultimoTrabajo) {
   if (!ultimoTrabajo) return { texto: 'sin datos', clase: 'bg-slate-100 text-slate-400' };
-  if (ultimoTrabajo.estado === 'impreso') return { texto: '✓ última prueba ok', clase: 'bg-green-100 text-green-700' };
-  if (ultimoTrabajo.estado === 'fallo_definitivo') return { texto: '✗ falló', clase: 'bg-red-100 text-red-700' };
-  return { texto: ultimoTrabajo.estado, clase: 'bg-amber-100 text-amber-700' };
+  if (ultimoTrabajo.status === 'printed') return { texto: '✓ última prueba ok', clase: 'bg-green-100 text-green-700' };
+  if (ultimoTrabajo.status === 'failed') return { texto: '✗ falló', clase: 'bg-red-100 text-red-700' };
+  return { texto: ultimoTrabajo.status, clase: 'bg-amber-100 text-amber-700' };
 }
 
 async function enviarPrueba(agenteId, impresoraId) {
@@ -65,36 +65,36 @@ async function enviarPrueba(agenteId, impresoraId) {
     <div v-else class="grid gap-4 sm:grid-cols-2">
       <div v-for="agente in agentes" :key="agente.id" class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div class="mb-3 flex items-center justify-between">
-          <h2 class="font-medium">{{ agente.nombre_descriptivo || agente.instalacion_id }}</h2>
+          <h2 class="font-medium">{{ agente.display_name || agente.installation_id }}</h2>
           <span
             class="rounded-full px-2 py-0.5 text-xs font-medium"
-            :class="agente.estado === 'online' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+            :class="agente.status === 'online' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
           >
-            {{ agente.estado }}
+            {{ agente.status }}
           </span>
         </div>
         <dl class="mb-4 space-y-1 text-sm text-slate-500">
-          <div class="flex justify-between"><dt>Instalación</dt><dd class="font-mono text-xs">{{ agente.instalacion_id }}</dd></div>
-          <div class="flex justify-between"><dt>Versión</dt><dd>{{ agente.version_agente || '—' }}</dd></div>
-          <div class="flex justify-between"><dt>Último heartbeat</dt><dd>{{ formatoFecha(agente.ultimo_heartbeat) }}</dd></div>
+          <div class="flex justify-between"><dt>Instalación</dt><dd class="font-mono text-xs">{{ agente.installation_id }}</dd></div>
+          <div class="flex justify-between"><dt>Versión</dt><dd>{{ agente.agent_version || '—' }}</dd></div>
+          <div class="flex justify-between"><dt>Último heartbeat</dt><dd>{{ formatoFecha(agente.last_heartbeat_at) }}</dd></div>
         </dl>
 
         <p class="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Impresoras</p>
-        <ul v-if="agente.impresoras.length" class="space-y-2">
-          <li v-for="imp in agente.impresoras" :key="imp.id" class="rounded-lg border border-slate-100 p-2">
+        <ul v-if="agente.printers.length" class="space-y-2">
+          <li v-for="imp in agente.printers" :key="imp.id" class="rounded-lg border border-slate-100 p-2">
             <div class="flex items-center justify-between text-sm">
-              <span>{{ imp.alias }} <span class="text-slate-400">({{ imp.tipo }})</span></span>
-              <span class="rounded-full px-2 py-0.5 text-xs" :class="imp.estado_heartbeat === 'online' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'">
-                {{ imp.estado_heartbeat }}
+              <span>{{ imp.alias }} <span class="text-slate-400">({{ imp.type }})</span></span>
+              <span class="rounded-full px-2 py-0.5 text-xs" :class="imp.status === 'online' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'">
+                {{ imp.status }}
               </span>
             </div>
             <div class="mt-1.5 flex items-center justify-between">
               <span
                 class="rounded-full px-2 py-0.5 text-xs"
-                :class="badgeUltimoTrabajo(imp.ultimo_trabajo).clase"
-                :title="imp.ultimo_trabajo?.error_mensaje || ''"
+                :class="badgeUltimoTrabajo(imp.last_job).clase"
+                :title="imp.last_job?.error_message || ''"
               >
-                {{ badgeUltimoTrabajo(imp.ultimo_trabajo).texto }}
+                {{ badgeUltimoTrabajo(imp.last_job).texto }}
               </span>
               <button
                 class="text-xs font-medium text-slate-600 hover:text-slate-900 disabled:opacity-50"

@@ -21,9 +21,9 @@ class ApiKeyController extends Controller
         return response()->json([
             'data' => $empresa->tokens()->orderByDesc('id')->get()->map(fn ($t) => [
                 'id' => $t->id,
-                'nombre' => $t->name,
-                'ultimo_uso' => $t->last_used_at,
-                'creado_en' => $t->created_at,
+                'name' => $t->name,
+                'last_used_at' => $t->last_used_at,
+                'created_at' => $t->created_at,
             ]),
         ]);
     }
@@ -31,18 +31,18 @@ class ApiKeyController extends Controller
     public function store(Request $request)
     {
         $datos = $request->validate([
-            'nombre' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
         ]);
 
         $empresa = $request->user();
         // 'tenant', nunca '*' -- ver nota en AuthController@login.
-        $nuevo = $empresa->createToken($datos['nombre'], ['tenant']);
+        $nuevo = $empresa->createToken($datos['name'], ['tenant']);
 
         return response()->json([
             'data' => [
                 'id' => $nuevo->accessToken->id,
-                'nombre' => $nuevo->accessToken->name,
-                'creado_en' => $nuevo->accessToken->created_at,
+                'name' => $nuevo->accessToken->name,
+                'created_at' => $nuevo->accessToken->created_at,
             ],
             // Unica vez que se devuelve en texto plano.
             'token' => $nuevo->plainTextToken,

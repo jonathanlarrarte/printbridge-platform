@@ -64,43 +64,43 @@ async function llamar(ruta, opciones = {}) {
 
 export const api = {
   signup: (nombre_empresa, nombre_usuario, email, password) =>
-    llamar('/signup', { method: 'POST', body: { nombre_empresa, nombre_usuario, email, password } }),
+    llamar('/signup', { method: 'POST', body: { company_name: nombre_empresa, user_name: nombre_usuario, email, password } }),
   login: (email, password) => llamar('/login', { method: 'POST', body: { email, password } }),
   logout: () => llamar('/logout', { method: 'POST' }),
 
-  empresa: () => llamar('/v1/empresa'),
+  empresa: () => llamar('/v1/company'),
 
   apiKeys: () => llamar('/v1/api-keys'),
-  crearApiKey: (nombre) => llamar('/v1/api-keys', { method: 'POST', body: { nombre } }),
+  crearApiKey: (nombre) => llamar('/v1/api-keys', { method: 'POST', body: { name: nombre } }),
   borrarApiKey: (id) => llamar(`/v1/api-keys/${id}`, { method: 'DELETE' }),
 
-  agentes: () => llamar('/v1/agentes'),
-  agente: (id) => llamar(`/v1/agentes/${id}`),
+  agentes: () => llamar('/v1/agents'),
+  agente: (id) => llamar(`/v1/agents/${id}`),
   enviarPruebaImpresion: (agenteId, impresoraId) =>
-    llamar(`/v1/agentes/${agenteId}/impresoras/${impresoraId}/prueba`, { method: 'POST' }),
+    llamar(`/v1/agents/${agenteId}/printers/${impresoraId}/test-print`, { method: 'POST' }),
 
   trabajos: (filtros = {}) => {
     const qs = new URLSearchParams(Object.entries(filtros).filter(([, v]) => v)).toString();
-    return llamar(`/v1/trabajos${qs ? `?${qs}` : ''}`);
+    return llamar(`/v1/jobs${qs ? `?${qs}` : ''}`);
   },
-  trabajo: (id) => llamar(`/v1/trabajos/${id}`),
+  trabajo: (id) => llamar(`/v1/jobs/${id}`),
 
-  estadisticasResumen: () => llamar('/v1/estadisticas/resumen'),
-  estadisticasAgente: (id) => llamar(`/v1/estadisticas/agente/${id}`),
+  estadisticasResumen: () => llamar('/v1/stats/summary'),
+  estadisticasAgente: (id) => llamar(`/v1/stats/agents/${id}`),
 
   webhooks: () => llamar('/v1/webhooks'),
   crearWebhook: (url, eventos_suscritos) =>
-    llamar('/v1/webhooks', { method: 'POST', body: { url, eventos_suscritos } }),
+    llamar('/v1/webhooks', { method: 'POST', body: { url, subscribed_events: eventos_suscritos } }),
   borrarWebhook: (id) => llamar(`/v1/webhooks/${id}`, { method: 'DELETE' }),
-  entregasWebhook: (id) => llamar(`/v1/webhooks/${id}/entregas`),
+  entregasWebhook: (id) => llamar(`/v1/webhooks/${id}/deliveries`),
 
   // Panel de super admin -- cruza el limite de tenant a proposito.
-  adminResumen: () => llamar('/v1/admin/resumen'),
-  adminEmpresas: () => llamar('/v1/admin/empresas'),
-  adminCrearEmpresa: (nombre, plan) => llamar('/v1/admin/empresas', { method: 'POST', body: { nombre, plan } }),
-  adminEmpresa: (id) => llamar(`/v1/admin/empresas/${id}`),
-  adminActualizarEmpresa: (id, datos) => llamar(`/v1/admin/empresas/${id}`, { method: 'PATCH', body: datos }),
+  adminResumen: () => llamar('/v1/admin/summary'),
+  adminEmpresas: () => llamar('/v1/admin/companies'),
+  adminCrearEmpresa: (nombre, plan) => llamar('/v1/admin/companies', { method: 'POST', body: { name: nombre, plan } }),
+  adminEmpresa: (id) => llamar(`/v1/admin/companies/${id}`),
+  adminActualizarEmpresa: (id, datos) => llamar(`/v1/admin/companies/${id}`, { method: 'PATCH', body: datos }),
   adminCrearApiKey: (empresaId, nombre) =>
-    llamar(`/v1/admin/empresas/${empresaId}/api-keys`, { method: 'POST', body: { nombre } }),
-  adminBorrarApiKey: (empresaId, id) => llamar(`/v1/admin/empresas/${empresaId}/api-keys/${id}`, { method: 'DELETE' }),
+    llamar(`/v1/admin/companies/${empresaId}/api-keys`, { method: 'POST', body: { name: nombre } }),
+  adminBorrarApiKey: (empresaId, id) => llamar(`/v1/admin/companies/${empresaId}/api-keys/${id}`, { method: 'DELETE' }),
 };

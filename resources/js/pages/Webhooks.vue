@@ -3,10 +3,10 @@ import { onMounted, ref } from 'vue';
 import { api } from '../api';
 import SecretoOculto from '../components/SecretoOculto.vue';
 
-// Debe coincidir con WebhookController::EVENTOS_DISPONIBLES en el backend.
+// Debe coincidir con App\Support\EventType::ALL en el backend.
 const EVENTOS_DISPONIBLES = [
-  'agente.online', 'agente.offline',
-  'trabajo.creado', 'trabajo.imprimiendo', 'trabajo.impreso', 'trabajo.fallo_definitivo',
+  'agent.online', 'agent.offline',
+  'job.created', 'job.printing', 'job.printed', 'job.failed',
 ];
 
 const webhooks = ref([]);
@@ -41,7 +41,7 @@ async function crear() {
   error.value = '';
   try {
     const respuesta = await api.crearWebhook(url.value, eventosElegidos.value);
-    secretoNuevo.value = respuesta.secreto;
+    secretoNuevo.value = respuesta.secret;
     url.value = '';
     eventosElegidos.value = [];
     await cargar();
@@ -113,7 +113,7 @@ async function verEntregas(id) {
         <div class="flex items-center justify-between">
           <div>
             <p class="font-mono text-sm">{{ w.url }}</p>
-            <p class="mt-1 text-xs text-slate-500">{{ w.eventos_suscritos.join(', ') }}</p>
+            <p class="mt-1 text-xs text-slate-500">{{ w.subscribed_events.join(', ') }}</p>
           </div>
           <div class="flex gap-2">
             <button class="text-sm text-slate-500 hover:text-slate-900" @click="verEntregas(w.id)">
@@ -129,9 +129,9 @@ async function verEntregas(id) {
           </thead>
           <tbody class="divide-y divide-slate-100">
             <tr v-for="e in entregas" :key="e.id">
-              <td class="py-1.5">{{ e.intento }}</td>
-              <td class="py-1.5">{{ e.status_http ?? 'sin respuesta' }}</td>
-              <td class="py-1.5">{{ e.exitosa ? new Date(e.entregado_en).toLocaleString() : 'fallida' }}</td>
+              <td class="py-1.5">{{ e.attempt }}</td>
+              <td class="py-1.5">{{ e.http_status ?? 'sin respuesta' }}</td>
+              <td class="py-1.5">{{ e.successful ? new Date(e.delivered_at).toLocaleString() : 'fallida' }}</td>
             </tr>
             <tr v-if="!entregas.length"><td colspan="3" class="py-2 text-slate-400">Sin entregas todavía.</td></tr>
           </tbody>

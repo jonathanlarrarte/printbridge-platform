@@ -43,86 +43,86 @@ export class PrintBridgeClient {
     return datos;
   }
 
-  // -- Agentes --
-  listarAgentes() {
-    return this.#request('/v1/agentes');
+  // -- Agents --
+  listAgents() {
+    return this.#request('/v1/agents');
   }
 
-  obtenerAgente(id) {
-    return this.#request(`/v1/agentes/${id}`);
+  getAgent(id) {
+    return this.#request(`/v1/agents/${id}`);
   }
 
-  listarImpresoras(agenteId) {
-    return this.#request(`/v1/agentes/${agenteId}/impresoras`);
+  listPrinters(agentId) {
+    return this.#request(`/v1/agents/${agentId}/printers`);
   }
 
-  // -- Trabajos --
-  /** @param {{ agente_id?: number, impresora_id?: number, estado?: string, desde?: string, hasta?: string }} filtros */
-  listarTrabajos(filtros = {}) {
+  // -- Jobs --
+  /** @param {{ agent_id?: number, printer_id?: number, status?: string, from?: string, to?: string }} filters */
+  listJobs(filters = {}) {
     const qs = new URLSearchParams(
-      Object.entries(filtros).filter(([, v]) => v !== undefined && v !== null && v !== '')
+      Object.entries(filters).filter(([, v]) => v !== undefined && v !== null && v !== '')
     ).toString();
-    return this.#request(`/v1/trabajos${qs ? `?${qs}` : ''}`);
+    return this.#request(`/v1/jobs${qs ? `?${qs}` : ''}`);
   }
 
-  obtenerTrabajo(id) {
-    return this.#request(`/v1/trabajos/${id}`);
+  getJob(id) {
+    return this.#request(`/v1/jobs/${id}`);
   }
 
-  // -- Estadísticas (sección 9 del doc) --
-  estadisticasResumen() {
-    return this.#request('/v1/estadisticas/resumen');
+  // -- Stats (sección 9 del doc) --
+  statsSummary() {
+    return this.#request('/v1/stats/summary');
   }
 
-  estadisticasAgente(agenteId) {
-    return this.#request(`/v1/estadisticas/agente/${agenteId}`);
+  agentStats(agentId) {
+    return this.#request(`/v1/stats/agents/${agentId}`);
   }
 
   // -- Webhooks (sección 8 del doc) --
-  listarWebhooks() {
+  listWebhooks() {
     return this.#request('/v1/webhooks');
   }
 
   /**
    * @param {string} url
-   * @param {string[]} eventosSuscritos ej. ['trabajo.impreso', 'trabajo.fallo_definitivo']
-   * @returns {Promise<{data: object, secreto: string}>} `secreto` solo se devuelve esta vez.
+   * @param {string[]} subscribedEvents ej. ['job.printed', 'job.failed']
+   * @returns {Promise<{data: object, secret: string}>} `secret` solo se devuelve esta vez.
    */
-  crearWebhook(url, eventosSuscritos) {
+  createWebhook(url, subscribedEvents) {
     return this.#request('/v1/webhooks', {
       method: 'POST',
-      body: { url, eventos_suscritos: eventosSuscritos },
+      body: { url, subscribed_events: subscribedEvents },
     });
   }
 
-  borrarWebhook(id) {
+  deleteWebhook(id) {
     return this.#request(`/v1/webhooks/${id}`, { method: 'DELETE' });
   }
 
-  entregasWebhook(id) {
-    return this.#request(`/v1/webhooks/${id}/entregas`);
+  webhookDeliveries(id) {
+    return this.#request(`/v1/webhooks/${id}/deliveries`);
   }
 }
 
 /**
  * Verifica la firma de un webhook recibido (sección 8.2 del doc).
- * @param {string} cuerpoCrudo el body tal cual llegó (string, sin parsear)
- * @param {string} firmaRecibida el valor del header X-PrintBridge-Signature (formato "sha256=...")
- * @param {string} secreto el secreto devuelto al crear el webhook
+ * @param {string} rawBody el body tal cual llegó (string, sin parsear)
+ * @param {string} receivedSignature el valor del header X-PrintBridge-Signature (formato "sha256=...")
+ * @param {string} secret el secreto devuelto al crear el webhook
  * @returns {Promise<boolean>}
  */
-export async function verificarFirmaWebhook(cuerpoCrudo, firmaRecibida, secreto) {
-  const [, firmaHex] = firmaRecibida.split('=');
+export async function verifyWebhookSignature(rawBody, receivedSignature, secret) {
+  const [, firmaHex] = receivedSignature.split('=');
   if (!firmaHex) return false;
 
   const clave = await crypto.subtle.importKey(
     'raw',
-    new TextEncoder().encode(secreto),
+    new TextEncoder().encode(secret),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign']
   );
-  const firma = await crypto.subtle.sign('HMAC', clave, new TextEncoder().encode(cuerpoCrudo));
+  const firma = await crypto.subtle.sign('HMAC', clave, new TextEncoder().encode(rawBody));
   const firmaCalculadaHex = [...new Uint8Array(firma)].map((b) => b.toString(16).padStart(2, '0')).join('');
 
   if (firmaCalculadaHex.length !== firmaHex.length) return false;

@@ -17,37 +17,37 @@ const client = new PrintBridgeClient({
   token: 'el-token-sanctum-de-tu-empresa',
 });
 
-const { data: agentes } = await client.listarAgentes();
-const { data: trabajos } = await client.listarTrabajos({ estado: 'fallo_definitivo' });
-const resumen = await client.estadisticasResumen();
+const { data: agents } = await client.listAgents();
+const { data: jobs } = await client.listJobs({ status: 'failed' });
+const summary = await client.statsSummary();
 
-const { data: webhook, secreto } = await client.crearWebhook(
+const { data: webhook, secret } = await client.createWebhook(
   'https://tu-sistema.com/webhooks/printbridge',
-  ['trabajo.impreso', 'trabajo.fallo_definitivo']
+  ['job.printed', 'job.failed']
 );
-// Guardá `secreto` ahora -- no se vuelve a mostrar.
+// Guardá `secret` ahora -- no se vuelve a mostrar.
 ```
 
 ## Verificar la firma de un webhook recibido
 
 Cada entrega de webhook incluye el header `X-PrintBridge-Signature`
 (`sha256=...`), calculado sobre el **cuerpo crudo** de la petición (sección
-8.2 del doc). Verificalo con el `secreto` que te dio `crearWebhook`:
+8.2 del doc). Verificalo con el `secret` que te dio `createWebhook`:
 
 ```js
-import { verificarFirmaWebhook } from '@printbridge/sdk-js';
+import { verifyWebhookSignature } from '@printbridge/sdk-js';
 
 // Express, con el body sin parsear (express.raw()):
 app.post('/webhooks/printbridge', express.raw({ type: 'application/json' }), async (req, res) => {
-  const cuerpoCrudo = req.body.toString('utf8');
-  const firma = req.header('X-PrintBridge-Signature');
+  const rawBody = req.body.toString('utf8');
+  const signature = req.header('X-PrintBridge-Signature');
 
-  if (!(await verificarFirmaWebhook(cuerpoCrudo, firma, process.env.PRINTBRIDGE_WEBHOOK_SECRET))) {
-    return res.status(401).send('firma invalida');
+  if (!(await verifyWebhookSignature(rawBody, signature, process.env.PRINTBRIDGE_WEBHOOK_SECRET))) {
+    return res.status(401).send('invalid signature');
   }
 
-  const evento = JSON.parse(cuerpoCrudo);
-  // ... procesar evento.tipo_evento, evento.datos ...
+  const event = JSON.parse(rawBody);
+  // ... procesar event.event_type, event.payload ...
   res.sendStatus(200);
 });
 ```
@@ -60,14 +60,14 @@ desde las rutas reales — siempre refleja el estado actual de la API).
 
 | Método | Descripción |
 |---|---|
-| `listarAgentes()` | `GET /v1/agentes` |
-| `obtenerAgente(id)` | `GET /v1/agentes/{id}` |
-| `listarImpresoras(agenteId)` | `GET /v1/agentes/{id}/impresoras` |
-| `listarTrabajos(filtros)` | `GET /v1/trabajos` (filtros: `agente_id`, `impresora_id`, `estado`, `desde`, `hasta`) |
-| `obtenerTrabajo(id)` | `GET /v1/trabajos/{id}` |
-| `estadisticasResumen()` | `GET /v1/estadisticas/resumen` |
-| `estadisticasAgente(agenteId)` | `GET /v1/estadisticas/agente/{id}` |
-| `listarWebhooks()` | `GET /v1/webhooks` |
-| `crearWebhook(url, eventosSuscritos)` | `POST /v1/webhooks` |
-| `borrarWebhook(id)` | `DELETE /v1/webhooks/{id}` |
-| `entregasWebhook(id)` | `GET /v1/webhooks/{id}/entregas` |
+| `listAgents()` | `GET /v1/agents` |
+| `getAgent(id)` | `GET /v1/agents/{id}` |
+| `listPrinters(agentId)` | `GET /v1/agents/{id}/printers` |
+| `listJobs(filters)` | `GET /v1/jobs` (filters: `agent_id`, `printer_id`, `status`, `from`, `to`) |
+| `getJob(id)` | `GET /v1/jobs/{id}` |
+| `statsSummary()` | `GET /v1/stats/summary` |
+| `agentStats(agentId)` | `GET /v1/stats/agents/{id}` |
+| `listWebhooks()` | `GET /v1/webhooks` |
+| `createWebhook(url, subscribedEvents)` | `POST /v1/webhooks` |
+| `deleteWebhook(id)` | `DELETE /v1/webhooks/{id}` |
+| `webhookDeliveries(id)` | `GET /v1/webhooks/{id}/deliveries` |

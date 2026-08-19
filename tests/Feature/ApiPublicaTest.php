@@ -21,12 +21,12 @@ class ApiPublicaTest extends TestCase
     {
         $this->getJson('/v1')
             ->assertOk()
-            ->assertJsonStructure(['documentacion', 'guia_de_integracion', 'crear_cuenta', 'autenticacion']);
+            ->assertJsonStructure(['documentation', 'integration_guide', 'sign_up', 'authentication']);
     }
 
     public function test_v1_requiere_autenticacion(): void
     {
-        $this->getJson('/v1/agentes')->assertUnauthorized();
+        $this->getJson('/v1/agents')->assertUnauthorized();
     }
 
     public function test_una_empresa_no_ve_agentes_de_otra(): void
@@ -40,11 +40,11 @@ class ApiPublicaTest extends TestCase
         $tokenA = $empresaA->createToken('t')->plainTextToken;
         $headers = ['Authorization' => "Bearer {$tokenA}"];
 
-        $respuesta = $this->getJson('/v1/agentes', $headers);
+        $respuesta = $this->getJson('/v1/agents', $headers);
         $respuesta->assertOk()->assertJsonCount(1, 'data');
-        $this->assertSame('pos-a', $respuesta->json('data.0.instalacion_id'));
+        $this->assertSame('pos-a', $respuesta->json('data.0.installation_id'));
 
-        $this->getJson("/v1/agentes/{$agenteB->id}", $headers)->assertNotFound();
+        $this->getJson("/v1/agents/{$agenteB->id}", $headers)->assertNotFound();
     }
 
     public function test_trabajos_se_escopan_por_empresa_via_relacion_agente(): void
@@ -59,10 +59,10 @@ class ApiPublicaTest extends TestCase
 
         $tokenA = $empresaA->createToken('t')->plainTextToken;
 
-        $this->getJson('/v1/trabajos', ['Authorization' => "Bearer {$tokenA}"])
+        $this->getJson('/v1/jobs', ['Authorization' => "Bearer {$tokenA}"])
             ->assertOk()
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.job_id_externo', 'j1');
+            ->assertJsonPath('data.0.external_job_id', 'j1');
     }
 
     public function test_estadisticas_agente_de_otra_empresa_da_404(): void
@@ -73,7 +73,7 @@ class ApiPublicaTest extends TestCase
 
         $tokenA = $empresaA->createToken('t')->plainTextToken;
 
-        $this->getJson("/v1/estadisticas/agente/{$agenteB->id}", ['Authorization' => "Bearer {$tokenA}"])
+        $this->getJson("/v1/stats/agents/{$agenteB->id}", ['Authorization' => "Bearer {$tokenA}"])
             ->assertNotFound();
     }
 }

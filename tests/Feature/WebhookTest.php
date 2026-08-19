@@ -18,9 +18,9 @@ class WebhookTest extends TestCase
 
         $crear = $this->postJson('/v1/webhooks', [
             'url' => 'https://ejemplo.com/hook',
-            'eventos_suscritos' => ['trabajo.impreso'],
+            'subscribed_events' => ['job.printed'],
         ], $headers);
-        $crear->assertCreated()->assertJsonStructure(['data' => ['id', 'url'], 'secreto']);
+        $crear->assertCreated()->assertJsonStructure(['data' => ['id', 'url'], 'secret']);
 
         $id = $crear->json('data.id');
         $this->getJson('/v1/webhooks', $headers)->assertOk()->assertJsonCount(1, 'data');
@@ -36,7 +36,7 @@ class WebhookTest extends TestCase
 
         $this->postJson('/v1/webhooks', [
             'url' => 'https://ejemplo.com/hook',
-            'eventos_suscritos' => ['algo.inventado'],
+            'subscribed_events' => ['algo.inventado'],
         ], $headers)->assertStatus(422);
     }
 
@@ -49,21 +49,21 @@ class WebhookTest extends TestCase
 
         $webhook = $this->postJson('/v1/webhooks', [
             'url' => 'https://ejemplo.com/hook',
-            'eventos_suscritos' => ['trabajo.impreso'],
+            'subscribed_events' => ['job.printed'],
         ], ['Authorization' => "Bearer {$token}"])->json();
 
-        $agenteToken = $this->postJson('/agente/registrar', [
-            'instalacion_id' => 'pos-x', 'cliente_codigo' => 'demo',
+        $agenteToken = $this->postJson('/agent/register', [
+            'installation_id' => 'pos-x', 'client_code' => 'demo',
         ])->json('token');
 
-        $this->postJson('/agente/eventos', [
-            'tipo_evento' => 'trabajo.impreso',
-            'job_id_externo' => 'job-1',
+        $this->postJson('/agent/events', [
+            'event_type' => 'job.printed',
+            'external_job_id' => 'job-1',
             'target' => 'receipt',
         ], ['Authorization' => "Bearer {$agenteToken}"])->assertStatus(202);
 
         Http::assertSent(function ($request) use ($webhook) {
-            $firmaEsperada = 'sha256='.hash_hmac('sha256', $request->body(), $webhook['secreto']);
+            $firmaEsperada = 'sha256='.hash_hmac('sha256', $request->body(), $webhook['secret']);
 
             return $request->url() === 'https://ejemplo.com/hook'
                 && $request->header('X-PrintBridge-Signature')[0] === $firmaEsperada;
@@ -81,16 +81,16 @@ class WebhookTest extends TestCase
 
         $this->postJson('/v1/webhooks', [
             'url' => 'https://ejemplo.com/hook',
-            'eventos_suscritos' => ['trabajo.fallo_definitivo'],
+            'subscribed_events' => ['job.failed'],
         ], ['Authorization' => "Bearer {$token}"]);
 
-        $agenteToken = $this->postJson('/agente/registrar', [
-            'instalacion_id' => 'pos-x', 'cliente_codigo' => 'demo',
+        $agenteToken = $this->postJson('/agent/register', [
+            'installation_id' => 'pos-x', 'client_code' => 'demo',
         ])->json('token');
 
-        $this->postJson('/agente/eventos', [
-            'tipo_evento' => 'trabajo.impreso',
-            'job_id_externo' => 'job-1',
+        $this->postJson('/agent/events', [
+            'event_type' => 'job.printed',
+            'external_job_id' => 'job-1',
             'target' => 'receipt',
         ], ['Authorization' => "Bearer {$agenteToken}"])->assertStatus(202);
 

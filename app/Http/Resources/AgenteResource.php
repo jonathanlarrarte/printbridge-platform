@@ -16,13 +16,13 @@ class AgenteResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'instalacion_id' => $this->instalacion_id,
-            'nombre_descriptivo' => $this->nombre_descriptivo,
-            'estado' => $this->estado,
-            'ultimo_heartbeat' => $this->ultimo_heartbeat,
-            'version_agente' => $this->version_agente,
-            'creado_en' => $this->creado_en,
-            'impresoras' => ImpresoraResource::collection($this->whenLoaded('impresoras')),
+            'installation_id' => $this->instalacion_id,
+            'display_name' => $this->nombre_descriptivo,
+            'status' => $this->estado,
+            'last_heartbeat_at' => $this->ultimo_heartbeat,
+            'agent_version' => $this->version_agente,
+            'created_at' => $this->creado_en,
+            'printers' => ImpresoraResource::collection($this->whenLoaded('impresoras')),
         ];
     }
 }

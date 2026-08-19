@@ -7,6 +7,7 @@ use App\Models\Evento;
 use App\Models\Impresora;
 use App\Models\TrabajoImpresion;
 use App\Models\WebhookConfigurado;
+use App\Support\EventType;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -38,10 +39,10 @@ class ProcesarEventoAgente implements ShouldQueue
         );
 
         $estado = match ($this->payload['tipo_evento']) {
-            'trabajo.creado' => 'en_cola',
-            'trabajo.imprimiendo' => 'imprimiendo',
-            'trabajo.impreso' => 'impreso',
-            'trabajo.fallo_definitivo' => 'fallo_definitivo',
+            EventType::JOB_CREATED => 'en_cola',
+            EventType::JOB_PRINTING => 'imprimiendo',
+            EventType::JOB_PRINTED => 'impreso',
+            EventType::JOB_FAILED => 'fallo_definitivo',
         };
 
         $impresora = Impresora::where('agente_id', $agente->id)

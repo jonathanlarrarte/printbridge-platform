@@ -14,10 +14,10 @@ onMounted(async () => {
 });
 
 const ENDPOINTS = [
-  ['GET', '/v1/agentes', 'Lista los agentes de tu empresa y su estado'],
-  ['GET', '/v1/agentes/{id}/impresoras', 'Impresoras registradas en un agente'],
-  ['GET', '/v1/trabajos', 'Trabajos de impresión (filtros: agente_id, estado, desde, hasta)'],
-  ['GET', '/v1/estadisticas/resumen', 'Tasa de éxito, uptime, volumen, errores'],
+  ['GET', '/v1/agents', 'Lista los agentes de tu empresa y su estado'],
+  ['GET', '/v1/agents/{id}/printers', 'Impresoras registradas en un agente'],
+  ['GET', '/v1/jobs', 'Trabajos de impresión (filtros: agent_id, status, from, to)'],
+  ['GET', '/v1/stats/summary', 'Tasa de éxito, uptime, volumen, errores'],
   ['GET', '/v1/webhooks', 'Tus webhooks configurados'],
   ['POST', '/v1/webhooks', 'Registrar un webhook nuevo'],
 ];
@@ -45,7 +45,7 @@ const ENDPOINTS = [
         Todas las llamadas a <code class="rounded bg-slate-100 px-1">/v1/*</code> van con un token Bearer.
         Generá uno en <router-link :to="{ name: 'empresa' }" class="font-medium text-slate-900 hover:underline">Empresa → API keys</router-link>.
       </p>
-      <pre class="overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100">curl {{ baseUrl }}/v1/agentes \
+      <pre class="overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100">curl {{ baseUrl }}/v1/agents \
   -H "Authorization: Bearer TU_API_KEY"</pre>
     </section>
 
@@ -53,8 +53,8 @@ const ENDPOINTS = [
       <h2 class="mb-2 text-sm font-semibold text-slate-700">2. Instalar un agente</h2>
       <p class="mb-3 text-sm text-slate-600">
         Cada agente corre en el equipo físico con la impresora conectada, y se autoregistra contra
-        <code class="rounded bg-slate-100 px-1">POST /agente/registrar</code> usando el código de tu empresa
-        <code v-if="empresa" class="rounded bg-slate-100 px-1">{{ empresa.codigo }}</code>.
+        <code class="rounded bg-slate-100 px-1">POST /agent/register</code> usando el código de tu empresa
+        <code v-if="empresa" class="rounded bg-slate-100 px-1">{{ empresa.code }}</code>.
         Una vez conectado aparece solo en <router-link :to="{ name: 'agentes' }" class="font-medium text-slate-900 hover:underline">Agentes</router-link>.
       </p>
       <router-link :to="{ name: 'instalar-agente' }"
@@ -86,7 +86,7 @@ const ENDPOINTS = [
       <pre class="overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100">import { PrintBridgeClient } from '@printbridge/sdk-js';
 
 const client = new PrintBridgeClient({ baseUrl: '{{ baseUrl }}', token: 'TU_API_KEY' });
-const { data: agentes } = await client.listarAgentes();</pre>
+const { data: agents } = await client.listAgents();</pre>
     </section>
 
     <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -95,7 +95,7 @@ const { data: agentes } = await client.listarAgentes();</pre>
         Cada entrega llega firmada en el header <code class="rounded bg-slate-100 px-1">X-PrintBridge-Signature</code>
         (HMAC-SHA256 sobre el cuerpo crudo). Configuralos en
         <router-link :to="{ name: 'webhooks' }" class="font-medium text-slate-900 hover:underline">Webhooks</router-link>,
-        y verificá la firma con <code class="rounded bg-slate-100 px-1">verificarFirmaWebhook</code> del SDK.
+        y verificá la firma con <code class="rounded bg-slate-100 px-1">verifyWebhookSignature</code> del SDK.
       </p>
     </section>
   </div>

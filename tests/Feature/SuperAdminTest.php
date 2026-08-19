@@ -45,19 +45,19 @@ class SuperAdminTest extends TestCase
 
         $this->postJson('/login', ['email' => 'admin@plataforma.test', 'password' => 'clave12345'])
             ->assertOk()
-            ->assertJsonPath('usuario.es_super_admin', true);
+            ->assertJsonPath('user.is_super_admin', true);
     }
 
     public function test_un_usuario_normal_no_puede_entrar_al_panel_admin(): void
     {
         $headers = ['Authorization' => 'Bearer '.$this->tokenUsuarioNormal()];
 
-        $this->getJson('/v1/admin/empresas', $headers)->assertStatus(403);
+        $this->getJson('/v1/admin/companies', $headers)->assertStatus(403);
     }
 
     public function test_sin_token_no_se_puede_entrar_al_panel_admin(): void
     {
-        $this->getJson('/v1/admin/empresas')->assertUnauthorized();
+        $this->getJson('/v1/admin/companies')->assertUnauthorized();
     }
 
     public function test_super_admin_ve_todas_las_empresas_no_solo_la_propia(): void
@@ -67,7 +67,7 @@ class SuperAdminTest extends TestCase
         Empresa::create(['nombre' => 'Cliente Dos', 'codigo' => 'cliente-dos', 'plan' => 'piloto', 'activo' => false]);
         Agente::create(['empresa_id' => $clienteUno->id, 'instalacion_id' => 'pos-1', 'token_hash' => 'x', 'estado' => 'online', 'creado_en' => now()]);
 
-        $respuesta = $this->getJson('/v1/admin/empresas', ['Authorization' => "Bearer {$tokenAdmin}"]);
+        $respuesta = $this->getJson('/v1/admin/companies', ['Authorization' => "Bearer {$tokenAdmin}"]);
 
         $respuesta->assertOk();
         // La propia empresa del super admin + las 2 creadas.
@@ -76,17 +76,17 @@ class SuperAdminTest extends TestCase
         // Regresion: withCount('agentes') sin withoutGlobalScopes() en el
         // subquery contaba solo los agentes de la empresa del admin
         // autenticado (0), no los de "Cliente Uno" (1).
-        $clienteUnoListado = collect($respuesta->json('data'))->firstWhere('codigo', 'cliente-uno');
-        $this->assertSame(1, $clienteUnoListado['agentes_count']);
+        $clienteUnoListado = collect($respuesta->json('data'))->firstWhere('code', 'cliente-uno');
+        $this->assertSame(1, $clienteUnoListado['agents_count']);
     }
 
     public function test_super_admin_crea_una_empresa_ya_activa(): void
     {
         $tokenAdmin = $this->tokenSuperAdmin();
 
-        $crear = $this->postJson('/v1/admin/empresas', ['nombre' => 'Alta Manual'], ['Authorization' => "Bearer {$tokenAdmin}"]);
+        $crear = $this->postJson('/v1/admin/companies', ['name' => 'Alta Manual'], ['Authorization' => "Bearer {$tokenAdmin}"]);
 
-        $crear->assertCreated()->assertJsonPath('data.activo', true);
+        $crear->assertCreated()->assertJsonPath('data.active', true);
         $this->assertDatabaseHas('empresas', ['nombre' => 'Alta Manual', 'activo' => true]);
     }
 
@@ -95,9 +95,9 @@ class SuperAdminTest extends TestCase
         $tokenAdmin = $this->tokenSuperAdmin();
         $empresa = Empresa::create(['nombre' => 'Pendiente', 'codigo' => 'pendiente', 'plan' => 'piloto', 'activo' => false]);
 
-        $this->patchJson("/v1/admin/empresas/{$empresa->id}", ['activo' => true], ['Authorization' => "Bearer {$tokenAdmin}"])
+        $this->patchJson("/v1/admin/companies/{$empresa->id}", ['active' => true], ['Authorization' => "Bearer {$tokenAdmin}"])
             ->assertOk()
-            ->assertJsonPath('data.activo', true);
+            ->assertJsonPath('data.active', true);
 
         $this->assertDatabaseHas('empresas', ['id' => $empresa->id, 'activo' => true]);
     }
@@ -111,11 +111,11 @@ class SuperAdminTest extends TestCase
             'estado' => 'online', 'creado_en' => now(),
         ]);
 
-        $respuesta = $this->getJson("/v1/admin/empresas/{$empresa->id}", ['Authorization' => "Bearer {$tokenAdmin}"]);
+        $respuesta = $this->getJson("/v1/admin/companies/{$empresa->id}", ['Authorization' => "Bearer {$tokenAdmin}"]);
 
         $respuesta->assertOk()
-            ->assertJsonPath('data.empresa.codigo', 'con-agente')
-            ->assertJsonCount(1, 'data.agentes');
+            ->assertJsonPath('data.company.code', 'con-agente')
+            ->assertJsonCount(1, 'data.agents');
     }
 
     public function test_super_admin_genera_un_api_key_en_nombre_de_otra_empresa(): void
@@ -123,8 +123,8 @@ class SuperAdminTest extends TestCase
         $tokenAdmin = $this->tokenSuperAdmin();
         $empresa = Empresa::create(['nombre' => 'Cliente', 'codigo' => 'cliente', 'plan' => 'piloto', 'activo' => true]);
 
-        $crear = $this->postJson("/v1/admin/empresas/{$empresa->id}/api-keys", ['nombre' => 'generada-por-admin'], ['Authorization' => "Bearer {$tokenAdmin}"]);
-        $crear->assertCreated()->assertJsonStructure(['data' => ['id', 'nombre'], 'token']);
+        $crear = $this->postJson("/v1/admin/companies/{$empresa->id}/api-keys", ['name' => 'generada-por-admin'], ['Authorization' => "Bearer {$tokenAdmin}"]);
+        $crear->assertCreated()->assertJsonStructure(['data' => ['id', 'name'], 'token']);
 
         // El token generado debe servir para autenticarse como ESA empresa.
         // auth()->forgetGuards(): Illuminate\Auth\RequestGuard cachea el
@@ -135,9 +135,9 @@ class SuperAdminTest extends TestCase
         // devolveria el actor del request anterior, no el del token nuevo.
         auth()->forgetGuards();
         $tokenGenerado = $crear->json('token');
-        $this->getJson('/v1/empresa', ['Authorization' => "Bearer {$tokenGenerado}"])
+        $this->getJson('/v1/company', ['Authorization' => "Bearer {$tokenGenerado}"])
             ->assertOk()
-            ->assertJsonPath('data.codigo', 'cliente');
+            ->assertJsonPath('data.code', 'cliente');
     }
 
     public function test_empresa_desactivada_pierde_acceso_a_la_api_aunque_el_token_ya_exista(): void
@@ -146,7 +146,7 @@ class SuperAdminTest extends TestCase
         $token = $empresa->createToken('t')->plainTextToken;
         $headers = ['Authorization' => "Bearer {$token}"];
 
-        $this->getJson('/v1/agentes', $headers)->assertOk();
+        $this->getJson('/v1/agents', $headers)->assertOk();
 
         $empresa->update(['activo' => false]);
 
@@ -154,6 +154,6 @@ class SuperAdminTest extends TestCase
         // objeto Empresa ya resuelto (con activo=true desde memoria), no
         // el valor actualizado en la base.
         auth()->forgetGuards();
-        $this->getJson('/v1/agentes', $headers)->assertStatus(403);
+        $this->getJson('/v1/agents', $headers)->assertStatus(403);
     }
 }
