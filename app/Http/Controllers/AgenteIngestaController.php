@@ -122,6 +122,21 @@ class AgenteIngestaController extends Controller
             );
         }
 
+        // El agente manda su set COMPLETO de impresoras en cada heartbeat
+        // (main/plataforma.js -- siempre serializa config.printers entero,
+        // nunca un delta), asi que cualquier alias que ya no aparece fue
+        // borrado localmente (boton "Eliminar" en la ventana del agente) y
+        // tiene que desaparecer aca tambien -- si no, queda "online" para
+        // siempre aunque el agente ya ni la reporte. Solo podamos cuando el
+        // campo vino presente: un heartbeat que directamente omite
+        // "printers" (valida como nullable) no dice nada sobre el estado
+        // actual de las impresoras, asi que no debe borrar nada.
+        if ($request->has('printers')) {
+            Impresora::where('agente_id', $agente->id)
+                ->whereNotIn('alias', array_keys($datos['printers'] ?? []))
+                ->delete();
+        }
+
         // Unico "empuje" de la plataforma hacia el agente: van montados en
         // la respuesta del heartbeat que el agente YA manda cada 15-30s
         // (seccion 2 del doc -- el agente sigue siendo quien inicia la

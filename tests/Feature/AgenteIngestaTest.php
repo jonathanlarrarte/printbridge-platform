@@ -71,6 +71,50 @@ class AgenteIngestaTest extends TestCase
         ]);
     }
 
+    public function test_heartbeat_borra_impresoras_que_ya_no_se_reportan(): void
+    {
+        [$agente, $token] = $this->registrarAgente();
+        $headers = ['Authorization' => "Bearer {$token}"];
+
+        $this->postJson('/agent/heartbeat', [
+            'printers' => [
+                'receipt' => ['online' => true],
+                'wristband' => ['online' => true],
+            ],
+        ], $headers)->assertOk();
+        $this->assertSame(2, $agente->impresoras()->count());
+
+        // El agente reporta su set completo en cada heartbeat -- si
+        // "wristband" ya no aparece es porque se borro localmente (boton
+        // "Eliminar" en la ventana del agente) y debe desaparecer aca
+        // tambien, no quedar "online" para siempre.
+        $this->postJson('/agent/heartbeat', [
+            'printers' => [
+                'receipt' => ['online' => true],
+            ],
+        ], $headers)->assertOk();
+
+        $this->assertDatabaseHas('impresoras', ['agente_id' => $agente->id, 'alias' => 'receipt']);
+        $this->assertDatabaseMissing('impresoras', ['agente_id' => $agente->id, 'alias' => 'wristband']);
+    }
+
+    public function test_heartbeat_sin_printers_no_borra_las_ya_reportadas(): void
+    {
+        [$agente, $token] = $this->registrarAgente();
+        $headers = ['Authorization' => "Bearer {$token}"];
+
+        $this->postJson('/agent/heartbeat', [
+            'printers' => ['receipt' => ['online' => true]],
+        ], $headers)->assertOk();
+
+        // Un heartbeat que directamente omite "printers" no dice nada sobre
+        // el estado actual de las impresoras -- no debe interpretarse como
+        // "ya no hay ninguna".
+        $this->postJson('/agent/heartbeat', [], $headers)->assertOk();
+
+        $this->assertDatabaseHas('impresoras', ['agente_id' => $agente->id, 'alias' => 'receipt']);
+    }
+
     public function test_heartbeat_registra_evento_agente_online_solo_en_la_transicion(): void
     {
         [$agente, $token] = $this->registrarAgente();
