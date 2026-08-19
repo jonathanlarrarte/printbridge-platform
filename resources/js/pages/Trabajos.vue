@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { api } from '../api';
 import { useAutoRefresh } from '../composables/useAutoRefresh';
 
@@ -9,6 +9,14 @@ const cargando = ref(true);
 const error = ref('');
 const filtroEstado = ref('');
 const filtroAgente = ref('');
+const mostrarPruebas = ref(false);
+
+// Ocultas por defecto: son ruido para una vista pensada para mostrar
+// trabajos reales del POS, no lo que el propio dashboard genero al
+// apretar "Enviar prueba".
+const trabajosVisibles = computed(() =>
+  mostrarPruebas.value ? trabajos.value : trabajos.value.filter((t) => !t.is_test)
+);
 
 const ESTADOS = ['pending', 'queued', 'printing', 'printed', 'failed'];
 
@@ -61,12 +69,16 @@ function badge(estado) {
           <option value="">Todos los estados</option>
           <option v-for="e in ESTADOS" :key="e" :value="e">{{ e }}</option>
         </select>
+        <label class="flex items-center gap-1.5 text-sm text-slate-600">
+          <input v-model="mostrarPruebas" type="checkbox" class="rounded border-slate-300" />
+          Mostrar pruebas de impresión
+        </label>
       </div>
     </div>
 
     <p v-if="cargando" class="text-sm text-slate-500">Cargando…</p>
     <p v-else-if="error" class="text-sm text-red-600">{{ error }}</p>
-    <p v-else-if="!trabajos.length" class="text-sm text-slate-500">Sin trabajos para este filtro.</p>
+    <p v-else-if="!trabajosVisibles.length" class="text-sm text-slate-500">Sin trabajos para este filtro.</p>
 
     <table v-else class="w-full overflow-hidden rounded-xl border border-slate-200 bg-white text-sm shadow-sm">
       <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-400">
@@ -80,11 +92,8 @@ function badge(estado) {
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-100">
-        <tr v-for="t in trabajos" :key="t.id">
-          <td class="px-4 py-3">
-            <span v-if="t.is_test" class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">Prueba</span>
-            <span v-else class="font-mono text-xs">{{ t.external_job_id }}</span>
-          </td>
+        <tr v-for="t in trabajosVisibles" :key="t.id" :class="{ 'opacity-60': t.is_test }">
+          <td class="px-4 py-3 font-mono text-xs" :class="t.is_test ? 'text-slate-400' : ''">{{ t.external_job_id }}</td>
           <td class="px-4 py-3">{{ t.agent_name }}</td>
           <td class="px-4 py-3">{{ t.target }}</td>
           <td class="px-4 py-3">

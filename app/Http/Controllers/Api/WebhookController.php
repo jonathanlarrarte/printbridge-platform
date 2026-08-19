@@ -25,8 +25,38 @@ class WebhookController extends Controller
     /**
      * Create a webhook.
      *
-     * The returned `secret` is only ever shown in this response — save it
-     * to verify the `X-PrintBridge-Signature` header on deliveries.
+     * This response only describes the webhook *configuration* you just
+     * created (`data`) plus the signing `secret` — it says nothing about
+     * what you'll actually receive later. When a subscribed event happens,
+     * PrintBridge sends a **separate** HTTP POST to your `url`, with this
+     * body:
+     *
+     * ```json
+     * {
+     *   "event_type": "job.printed",
+     *   "event_id": 4821,
+     *   "job_id": 1902,
+     *   "agent_id": 6,
+     *   "created_at": "2026-08-19T18:20:32+00:00",
+     *   "payload": { "installation_id": "pos-desktop-o6gu6jt-dc8d9e41" }
+     * }
+     * ```
+     *
+     * `payload` varies by `event_type` -- for `job.*` events it's the raw
+     * data the agent reported for that job event; for `agent.online`/
+     * `agent.offline` it's just `{ installation_id }`.
+     *
+     * That request carries an `X-PrintBridge-Signature: sha256=<hex>` header
+     * -- HMAC-SHA256 of the raw request body, keyed with the `secret` below.
+     * Verify it before trusting the payload (see `verifyWebhookSignature` in
+     * `@printbridge/sdk-js`, or the Printing Examples guide for the raw
+     * HMAC computation in other languages). Delivery retries with backoff
+     * (30s, 2min, 10min, 1h, 6h) up to 5 attempts if your endpoint doesn't
+     * respond 2xx within 10s -- see `GET /v1/webhooks/{id}/deliveries` for
+     * the attempt-by-attempt history.
+     *
+     * The returned `secret` (for signature verification, not for the
+     * delivery body above) is only ever shown in this response.
      */
     public function store(Request $request)
     {
