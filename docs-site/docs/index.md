@@ -46,6 +46,9 @@ webhooks.
 - [POS Multi-Branch Integration](./guides/pos-integration.md) — full
   architecture, a two-printer branch example, and code samples in
   JavaScript, Python, PHP, C#, and Java.
+- [Printing Examples: Text & HTML](./guides/printing-examples.md) — complete
+  Vue, Laravel, and plain PHP examples for printing a plain string, a
+  structured receipt, or full HTML.
 - Browse the **API Reference** in the sidebar for every endpoint,
   request/response shape, and example.
 - [Install and register an agent](https://impryxa.vekronis.com/#/instalar-agente) —

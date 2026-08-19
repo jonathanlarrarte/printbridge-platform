@@ -1,9 +1,6 @@
 // @ts-check
 import apiSidebarModule from './docs/reference/sidebar.ts';
 
-// Interop shim: depending on how this .ts file gets transpiled, the array we
-// want ends up at either apiSidebarModule.apisidebar or
-// apiSidebarModule.default.apisidebar.
 // Interop across jiti/esbuild is inconsistent about *which* shape the
 // namespace ends up in -- sometimes {apisidebar: [...]}, sometimes
 // {default: {apisidebar: [...]}}, sometimes the array itself gets unwrapped
@@ -18,6 +15,7 @@ const sidebars = {
     'index',
     'guides/getting-started',
     'guides/pos-integration',
+    'guides/printing-examples',
     {
       type: 'category',
       label: 'API Reference',

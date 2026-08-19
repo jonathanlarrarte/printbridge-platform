@@ -73,6 +73,9 @@ command language. See the
 
 ## 3. Local integration (POS ↔ agent)
 
+For Vue/Laravel-specific examples of printing a plain string vs. HTML, see
+[Printing Examples: Text & HTML](./printing-examples.md).
+
 Each register's agent exposes two channels on `localhost:8181` (port
 configurable):
 
