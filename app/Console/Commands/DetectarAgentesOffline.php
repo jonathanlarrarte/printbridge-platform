@@ -34,6 +34,14 @@ class DetectarAgentesOffline extends Command
 
         foreach ($agentes as $agente) {
             $agente->update(['estado' => 'offline']);
+
+            // Sin esto, una impresora se queda pegada en "online" para
+            // siempre: ese estado es solo el ultimo valor que reporto el
+            // heartbeat, y si el agente ya no manda heartbeats no hay forma
+            // de saber el estado real de sus impresoras -- offline es la
+            // unica respuesta honesta.
+            $agente->impresoras()->update(['estado_heartbeat' => 'offline', 'actualizado_en' => now()]);
+
             EventosPlataforma::registrarTransicionAgente($agente, EventType::AGENT_OFFLINE);
             $this->info("Agente {$agente->instalacion_id} marcado offline (sin heartbeat desde {$agente->ultimo_heartbeat}).");
         }
