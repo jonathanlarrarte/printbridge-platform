@@ -73,7 +73,7 @@ class ApiPublicaTest extends TestCase
         $agenteSinNombre = Agente::create(['empresa_id' => $empresa->id, 'instalacion_id' => 'pos-b', 'token_hash' => 'y', 'estado' => 'online', 'creado_en' => now()]);
 
         TrabajoImpresion::create(['agente_id' => $agenteConNombre->id, 'job_id_externo' => 'orden-123', 'target' => 'receipt', 'estado' => 'impreso']);
-        TrabajoImpresion::create(['agente_id' => $agenteSinNombre->id, 'job_id_externo' => 'prueba-'.Str::uuid(), 'target' => 'receipt', 'estado' => 'impreso']);
+        TrabajoImpresion::create(['agente_id' => $agenteSinNombre->id, 'job_id_externo' => 'test-print-'.Str::uuid(), 'target' => 'receipt', 'estado' => 'impreso']);
 
         $token = $empresa->createToken('t')->plainTextToken;
         $respuesta = $this->getJson('/v1/jobs', ['Authorization' => "Bearer {$token}"])->assertOk();
@@ -83,7 +83,7 @@ class ApiPublicaTest extends TestCase
         $this->assertSame('Caja 3', $conNombre['agent_name']);
         $this->assertFalse($conNombre['is_test']);
 
-        $sinNombre = collect($respuesta->json('data'))->first(fn ($t) => str_starts_with($t['external_job_id'], 'prueba-'));
+        $sinNombre = collect($respuesta->json('data'))->first(fn ($t) => str_starts_with($t['external_job_id'], 'test-print-'));
         $this->assertSame('pos-b', $sinNombre['agent_name']);
         $this->assertTrue($sinNombre['is_test']);
     }

@@ -43,7 +43,7 @@ class PruebaImpresionController extends Controller
         return ComandoPrueba::create([
             'agente_id' => $agente->id,
             'impresora_id' => $impresora->id,
-            'job_id_externo' => 'prueba-'.Str::uuid(),
+            'job_id_externo' => 'test-print-'.Str::uuid(),
             'target' => $impresora->alias,
             'format' => $format,
             'data' => $data,
