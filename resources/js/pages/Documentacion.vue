@@ -27,6 +27,18 @@ const ENDPOINTS = [
   <div class="max-w-3xl">
     <h1 class="mb-6 text-lg font-semibold">Documentación de integración</h1>
 
+    <section class="mb-6 rounded-xl border border-slate-900 bg-slate-900 p-5 text-white shadow-sm">
+      <h2 class="mb-2 text-sm font-semibold">¿Cadena con varias sucursales o puntos de venta?</h2>
+      <p class="mb-3 text-sm text-slate-300">
+        Guía técnica completa: arquitectura del flujo, cómo configurar una sucursal con impresora
+        térmica de 80mm + impresora de brazaletes, ejemplos de integración en JavaScript, Python,
+        PHP, C# y Java, y cómo escalar a 10+ locales.
+      </p>
+      <router-link :to="{ name: 'integracion-pos' }" class="inline-block rounded-md bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100">
+        Ver guía de integración POS multi-sucursal →
+      </router-link>
+    </section>
+
     <section class="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <h2 class="mb-2 text-sm font-semibold text-slate-700">1. Autenticación</h2>
       <p class="mb-3 text-sm text-slate-600">

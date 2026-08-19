@@ -9,6 +9,7 @@ import Webhooks from './pages/Webhooks.vue';
 import Empresa from './pages/Empresa.vue';
 import Documentacion from './pages/Documentacion.vue';
 import InstalarAgente from './pages/InstalarAgente.vue';
+import IntegracionPOS from './pages/IntegracionPOS.vue';
 import AdminOverview from './pages/admin/AdminOverview.vue';
 import AdminEmpresas from './pages/admin/AdminEmpresas.vue';
 import AdminEmpresaDetalle from './pages/admin/AdminEmpresaDetalle.vue';
@@ -26,6 +27,7 @@ const routes = [
   { path: '/empresa', name: 'empresa', component: Empresa },
   { path: '/documentacion', name: 'documentacion', component: Documentacion },
   { path: '/instalar-agente', name: 'instalar-agente', component: InstalarAgente },
+  { path: '/integracion-pos', name: 'integracion-pos', component: IntegracionPOS },
   { path: '/admin', name: 'admin-overview', component: AdminOverview, meta: { superAdmin: true } },
   { path: '/admin/empresas', name: 'admin-empresas', component: AdminEmpresas, meta: { superAdmin: true } },
   { path: '/admin/empresas/:id', name: 'admin-empresa', component: AdminEmpresaDetalle, meta: { superAdmin: true } },
