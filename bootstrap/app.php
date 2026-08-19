@@ -28,6 +28,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // redirigir a route('login') (inexistente) para requests sin
         // Accept: application/json.
         $middleware->redirectGuestsTo(fn () => null);
+
+        // Nginx hace TLS termination en 443 y reenvia a este proceso por
+        // 127.0.0.1:8000 (ver /etc/nginx/sites-available/impryxa.vekronis.com.conf)
+        // -- sin esto, url()/isSecure() no ven X-Forwarded-Proto y generan
+        // enlaces http:// aunque el visitante este en https://.
+        $middleware->trustProxies(at: ['127.0.0.1', '::1']);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // Esta plataforma no tiene login de sesion web: las rutas v1/* y
