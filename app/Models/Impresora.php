@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * No usa BelongsToTenant: esta tabla no tiene empresa_id propio, solo
@@ -32,5 +33,15 @@ class Impresora extends Model
     public function trabajos(): HasMany
     {
         return $this->hasMany(TrabajoImpresion::class);
+    }
+
+    /**
+     * Ultimo resultado real de impresion en esa impresora (¿fallo? ¿salio
+     * bien?) -- se carga con with('impresoras.ultimoTrabajo') para evitar
+     * N+1, nunca implicitamente.
+     */
+    public function ultimoTrabajo(): HasOne
+    {
+        return $this->hasOne(TrabajoImpresion::class)->latestOfMany();
     }
 }

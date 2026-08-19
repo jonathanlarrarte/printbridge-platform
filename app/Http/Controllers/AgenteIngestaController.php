@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\ProcesarEventoAgente;
 use App\Models\Agente;
+use App\Models\ComandoPrueba;
 use App\Models\Empresa;
 use App\Models\Impresora;
 use App\Services\EventosPlataforma;
@@ -114,7 +115,25 @@ class AgenteIngestaController extends Controller
             );
         }
 
-        return response()->json(['ok' => true]);
+        // Unico "empuje" de la plataforma hacia el agente: van montados en
+        // la respuesta del heartbeat que el agente YA manda cada 15-30s
+        // (seccion 2 del doc -- el agente sigue siendo quien inicia la
+        // conexion). Se marcan entregados aca mismo para no reenviarlos.
+        $comandos = ComandoPrueba::where('agente_id', $agente->id)->where('estado', 'pendiente')->get();
+
+        if ($comandos->isNotEmpty()) {
+            ComandoPrueba::whereIn('id', $comandos->pluck('id'))->update(['estado' => 'entregado', 'entregado_en' => now()]);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'comandos_pendientes' => $comandos->map(fn ($c) => [
+                'id' => $c->job_id_externo,
+                'target' => $c->target,
+                'format' => $c->format,
+                'data' => $c->data,
+            ]),
+        ]);
     }
 
     /**

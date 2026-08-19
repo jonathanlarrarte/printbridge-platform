@@ -63,14 +63,21 @@ class SuperAdminTest extends TestCase
     public function test_super_admin_ve_todas_las_empresas_no_solo_la_propia(): void
     {
         $tokenAdmin = $this->tokenSuperAdmin();
-        Empresa::create(['nombre' => 'Cliente Uno', 'codigo' => 'cliente-uno', 'plan' => 'piloto', 'activo' => true]);
+        $clienteUno = Empresa::create(['nombre' => 'Cliente Uno', 'codigo' => 'cliente-uno', 'plan' => 'piloto', 'activo' => true]);
         Empresa::create(['nombre' => 'Cliente Dos', 'codigo' => 'cliente-dos', 'plan' => 'piloto', 'activo' => false]);
+        Agente::create(['empresa_id' => $clienteUno->id, 'instalacion_id' => 'pos-1', 'token_hash' => 'x', 'estado' => 'online', 'creado_en' => now()]);
 
         $respuesta = $this->getJson('/v1/admin/empresas', ['Authorization' => "Bearer {$tokenAdmin}"]);
 
         $respuesta->assertOk();
         // La propia empresa del super admin + las 2 creadas.
         $this->assertGreaterThanOrEqual(3, count($respuesta->json('data')));
+
+        // Regresion: withCount('agentes') sin withoutGlobalScopes() en el
+        // subquery contaba solo los agentes de la empresa del admin
+        // autenticado (0), no los de "Cliente Uno" (1).
+        $clienteUnoListado = collect($respuesta->json('data'))->firstWhere('codigo', 'cliente-uno');
+        $this->assertSame(1, $clienteUnoListado['agentes_count']);
     }
 
     public function test_super_admin_crea_una_empresa_ya_activa(): void

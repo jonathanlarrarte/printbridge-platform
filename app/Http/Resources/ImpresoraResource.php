@@ -24,6 +24,11 @@ class ImpresoraResource extends JsonResource
             'puerto' => $this->puerto,
             'estado_heartbeat' => $this->estado_heartbeat,
             'actualizado_en' => $this->actualizado_en,
+            'ultimo_trabajo' => $this->whenLoaded('ultimoTrabajo', fn () => $this->ultimoTrabajo ? [
+                'estado' => $this->ultimoTrabajo->estado,
+                'error_mensaje' => $this->ultimoTrabajo->error_mensaje,
+                'creado_en' => $this->ultimoTrabajo->created_at,
+            ] : null),
         ];
     }
 }

@@ -20,8 +20,12 @@ class EmpresaAdminController extends Controller
 {
     public function index()
     {
+        // withCount('agentes') sin mas: el global scope BelongsToTenant de
+        // Agente se cuela en el subquery cuando hay un usuario autenticado
+        // (que siempre lo hay aca), contando solo los agentes de la propia
+        // empresa del super admin en vez de los de cada fila listada.
         $empresas = Empresa::withoutGlobalScopes()
-            ->withCount('agentes')
+            ->withCount(['agentes' => fn ($q) => $q->withoutGlobalScopes()])
             ->orderByDesc('id')
             ->get();
 
@@ -61,7 +65,7 @@ class EmpresaAdminController extends Controller
     public function show(int $id)
     {
         $empresa = Empresa::withoutGlobalScopes()->findOrFail($id);
-        $agentes = Agente::withoutGlobalScopes()->where('empresa_id', $id)->with('impresoras')->orderBy('id')->get();
+        $agentes = Agente::withoutGlobalScopes()->where('empresa_id', $id)->with('impresoras.ultimoTrabajo')->orderBy('id')->get();
         $estadisticas = EstadisticaAgregada::withoutGlobalScopes()
             ->where('empresa_id', $id)->whereNull('agente_id')->first();
 

@@ -27,7 +27,7 @@ const links = computed(() => [
   { name: 'webhooks', label: 'Webhooks' },
   { name: 'documentacion', label: 'Docs' },
   { name: 'empresa', label: 'Empresa' },
-  ...(sesion.value?.usuario?.es_super_admin ? [{ name: 'admin-empresas', label: 'Admin' }] : []),
+  ...(sesion.value?.usuario?.es_super_admin ? [{ name: 'admin-overview', label: 'Admin' }] : []),
 ]);
 
 async function salir() {

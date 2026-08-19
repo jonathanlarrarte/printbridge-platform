@@ -76,6 +76,8 @@ export const api = {
 
   agentes: () => llamar('/v1/agentes'),
   agente: (id) => llamar(`/v1/agentes/${id}`),
+  enviarPruebaImpresion: (agenteId, impresoraId) =>
+    llamar(`/v1/agentes/${agenteId}/impresoras/${impresoraId}/prueba`, { method: 'POST' }),
 
   trabajos: (filtros = {}) => {
     const qs = new URLSearchParams(Object.entries(filtros).filter(([, v]) => v)).toString();
@@ -93,6 +95,7 @@ export const api = {
   entregasWebhook: (id) => llamar(`/v1/webhooks/${id}/entregas`),
 
   // Panel de super admin -- cruza el limite de tenant a proposito.
+  adminResumen: () => llamar('/v1/admin/resumen'),
   adminEmpresas: () => llamar('/v1/admin/empresas'),
   adminCrearEmpresa: (nombre, plan) => llamar('/v1/admin/empresas', { method: 'POST', body: { nombre, plan } }),
   adminEmpresa: (id) => llamar(`/v1/admin/empresas/${id}`),

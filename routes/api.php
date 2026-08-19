@@ -3,10 +3,12 @@
 use App\Http\Controllers\AgenteIngestaController;
 use App\Http\Controllers\Api\Admin\ApiKeyAdminController;
 use App\Http\Controllers\Api\Admin\EmpresaAdminController;
+use App\Http\Controllers\Api\Admin\ResumenAdminController;
 use App\Http\Controllers\Api\AgenteController;
 use App\Http\Controllers\Api\ApiKeyController;
 use App\Http\Controllers\Api\EmpresaController;
 use App\Http\Controllers\Api\EstadisticaController;
+use App\Http\Controllers\Api\PruebaImpresionController;
 use App\Http\Controllers\Api\TrabajoController;
 use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\AuthController;
@@ -46,6 +48,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'empresa.activa'])->group(funct
     Route::get('/agentes', [AgenteController::class, 'index']);
     Route::get('/agentes/{id}', [AgenteController::class, 'show']);
     Route::get('/agentes/{id}/impresoras', [AgenteController::class, 'impresoras']);
+    Route::post('/agentes/{agenteId}/impresoras/{impresoraId}/prueba', [PruebaImpresionController::class, 'store']);
 
     Route::get('/trabajos', [TrabajoController::class, 'index']);
     Route::get('/trabajos/{id}', [TrabajoController::class, 'show']);
@@ -69,6 +72,8 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'empresa.activa'])->group(funct
 // EmpresaAdminController). Requiere la ability 'super-admin' en el token,
 // no solo estar autenticado.
 Route::prefix('v1/admin')->middleware(['auth:sanctum', 'empresa.activa', 'super.admin'])->group(function () {
+    Route::get('/resumen', [ResumenAdminController::class, 'show']);
+
     Route::get('/empresas', [EmpresaAdminController::class, 'index']);
     Route::post('/empresas', [EmpresaAdminController::class, 'store']);
     Route::get('/empresas/{id}', [EmpresaAdminController::class, 'show']);

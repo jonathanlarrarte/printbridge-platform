@@ -15,7 +15,7 @@ class AgenteController extends Controller
      */
     public function index()
     {
-        return AgenteResource::collection(Agente::with('impresoras')->orderBy('id')->paginate());
+        return AgenteResource::collection(Agente::with('impresoras.ultimoTrabajo')->orderBy('id')->paginate());
     }
 
     public function show(int $id)
@@ -23,7 +23,7 @@ class AgenteController extends Controller
         // findOrFail (no route-model-binding) para garantizar que el global
         // scope de tenant ya se evalua con Auth::user() resuelto por el
         // middleware auth:sanctum, que corre antes de este metodo.
-        $agente = Agente::with('impresoras')->findOrFail($id);
+        $agente = Agente::with('impresoras.ultimoTrabajo')->findOrFail($id);
 
         return new AgenteResource($agente);
     }
@@ -32,6 +32,6 @@ class AgenteController extends Controller
     {
         $agente = Agente::findOrFail($id);
 
-        return ImpresoraResource::collection($agente->impresoras);
+        return ImpresoraResource::collection($agente->impresoras()->with('ultimoTrabajo')->get());
     }
 }

@@ -1,12 +1,13 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import { api } from '../api';
 
 const agentes = ref([]);
 const cargando = ref(true);
 const error = ref('');
+const estadoPrueba = reactive({}); // { [impresoraId]: 'enviando' | 'enviado' | 'error' }
 
-onMounted(async () => {
+async function cargar() {
   try {
     const respuesta = await api.agentes();
     agentes.value = respuesta.data;
@@ -15,10 +16,30 @@ onMounted(async () => {
   } finally {
     cargando.value = false;
   }
-});
+}
+
+onMounted(cargar);
 
 function formatoFecha(f) {
   return f ? new Date(f).toLocaleString() : '—';
+}
+
+function badgeUltimoTrabajo(ultimoTrabajo) {
+  if (!ultimoTrabajo) return { texto: 'sin datos', clase: 'bg-slate-100 text-slate-400' };
+  if (ultimoTrabajo.estado === 'impreso') return { texto: '✓ última prueba ok', clase: 'bg-green-100 text-green-700' };
+  if (ultimoTrabajo.estado === 'fallo_definitivo') return { texto: '✗ falló', clase: 'bg-red-100 text-red-700' };
+  return { texto: ultimoTrabajo.estado, clase: 'bg-amber-100 text-amber-700' };
+}
+
+async function enviarPrueba(agenteId, impresoraId) {
+  estadoPrueba[impresoraId] = 'enviando';
+  try {
+    await api.enviarPruebaImpresion(agenteId, impresoraId);
+    estadoPrueba[impresoraId] = 'enviado';
+    setTimeout(() => cargar(), 20000); // el agente la recoge en su proximo heartbeat (hasta 30s)
+  } catch {
+    estadoPrueba[impresoraId] = 'error';
+  }
 }
 </script>
 
@@ -59,15 +80,30 @@ function formatoFecha(f) {
         </dl>
 
         <p class="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Impresoras</p>
-        <ul v-if="agente.impresoras.length" class="space-y-1">
-          <li v-for="imp in agente.impresoras" :key="imp.id" class="flex items-center justify-between text-sm">
-            <span>{{ imp.alias }} <span class="text-slate-400">({{ imp.tipo }})</span></span>
-            <span
-              class="rounded-full px-2 py-0.5 text-xs"
-              :class="imp.estado_heartbeat === 'online' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'"
-            >
-              {{ imp.estado_heartbeat }}
-            </span>
+        <ul v-if="agente.impresoras.length" class="space-y-2">
+          <li v-for="imp in agente.impresoras" :key="imp.id" class="rounded-lg border border-slate-100 p-2">
+            <div class="flex items-center justify-between text-sm">
+              <span>{{ imp.alias }} <span class="text-slate-400">({{ imp.tipo }})</span></span>
+              <span class="rounded-full px-2 py-0.5 text-xs" :class="imp.estado_heartbeat === 'online' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'">
+                {{ imp.estado_heartbeat }}
+              </span>
+            </div>
+            <div class="mt-1.5 flex items-center justify-between">
+              <span
+                class="rounded-full px-2 py-0.5 text-xs"
+                :class="badgeUltimoTrabajo(imp.ultimo_trabajo).clase"
+                :title="imp.ultimo_trabajo?.error_mensaje || ''"
+              >
+                {{ badgeUltimoTrabajo(imp.ultimo_trabajo).texto }}
+              </span>
+              <button
+                class="text-xs font-medium text-slate-600 hover:text-slate-900 disabled:opacity-50"
+                :disabled="estadoPrueba[imp.id] === 'enviando'"
+                @click="enviarPrueba(agente.id, imp.id)"
+              >
+                {{ { enviando: 'Enviando…', enviado: 'Enviada ✓', error: 'Error, reintentar' }[estadoPrueba[imp.id]] || 'Enviar prueba' }}
+              </button>
+            </div>
           </li>
         </ul>
         <p v-else class="text-sm text-slate-400">Sin impresoras configuradas.</p>
