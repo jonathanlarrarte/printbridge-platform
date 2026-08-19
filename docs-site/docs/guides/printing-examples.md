@@ -17,11 +17,87 @@ for why that split exists. This matters for the Laravel example below —
 read the note there before copying it as-is.
 :::
 
+## What's a "job"?
+
+Every time you ask the agent to print something, it doesn't print
+immediately — it wraps your request into a **job** and pushes it onto a
+local queue (persisted to disk, so it survives an app restart) before
+touching the printer at all. This is what makes the whole thing reliable:
+if the printer is off, jammed, or busy, your call still returns
+instantly, and the agent retries the job in the background — up to 5
+times — without you writing any retry logic yourself.
+
+A job is just the object you send: `{ id?, token, target, format, data }`,
+plus internal bookkeeping the agent adds (attempt count, timestamp,
+status). `id` is optional — if you don't send one, the agent generates a
+UUID and hands it back to you, which is how you correlate an async
+result to the request that caused it.
+
+**Job lifecycle** — these are the exact status strings you'll see, in
+order:
+
+| Status | When | Where you see it |
+|---|---|---|
+| `encolado` | Synchronously, the instant the agent accepts your request | The direct response (WS ack or HTTP response body) |
+| `en_cola` | Same moment, pushed as an event | WebSocket only |
+| `imprimiendo` | The queue picked up the job and is actively sending it to the printer | WebSocket only |
+| `impreso` | Printed successfully | WebSocket only |
+| `fallo_definitivo` | Failed on all 5 attempts | WebSocket only |
+
+The **HTTP endpoint only ever gives you `encolado`** — it's fire-and-forget
+by design (see [POS Integration §3](./pos-integration.md#3-local-integration-pos--agent)).
+If you need to know whether a job actually printed or failed, use the
+WebSocket connection instead, which pushes every subsequent status change
+for as long as it stays open.
+
+## Expected responses, exactly
+
+**WebSocket — immediate ack**, sent the instant your message is received
+(before the job has actually printed):
+
+```json
+{ "status": "encolado", "jobId": "3fa85f64-5717-4562-b3fc-2c963f66afa6" }
+```
+
+**WebSocket — lifecycle pushes**, sent later, asynchronously, as the job
+moves through the queue (same `jobId` each time so you can match them up):
+
+```json
+{ "status": "en_cola", "jobId": "3fa85f64-..." }
+{ "status": "imprimiendo", "jobId": "3fa85f64-..." }
+{ "status": "impreso", "jobId": "3fa85f64-...", "detalle": { "enviado": true } }
+```
+
+Or, if every retry fails:
+
+```json
+{ "status": "fallo_definitivo", "jobId": "3fa85f64-...", "detalle": "Timeout conectando a 192.168.1.50:9100" }
+```
+
+**WebSocket — errors** (note the field is `mensaje`, not `error`):
+
+```json
+{ "status": "error", "mensaje": "JSON invalido" }
+{ "status": "error", "jobId": "3fa85f64-...", "mensaje": "token invalido" }
+```
+
+**HTTP `POST /print` — success** (the only response you get; nothing further is pushed):
+
+```json
+{ "status": "encolado", "jobId": "3fa85f64-5717-4562-b3fc-2c963f66afa6" }
+```
+
+**HTTP `POST /print` — error** (HTTP 401, and note the field here is `error`, not `mensaje` — genuinely inconsistent with the WebSocket error shape above, so don't reuse the same error-parsing code for both channels):
+
+```json
+{ "error": "token invalido" }
+```
+
 ## The three ways to print
 
 | `format` | `data` is... | Best for |
 |---|---|---|
-| `raw` | A plain string (or base64) sent to the printer byte-for-byte | You already have exact printer command bytes, or don't care about layout |
+| `raw` | A **base64-encoded** string, decoded and sent to the printer byte-for-byte | You already have exact printer command bytes (or plain text you've encoded yourself) |
 | `escpos` | A structured object (`negocio`, `items`, `total`, ...) | Simple receipts, fast, crisp native text |
 | `html` | An HTML string, rendered and printed as an image | Rich layouts, logos, custom fonts — see [POS Integration §3](./pos-integration.md#why-print-to-a-target-instead-of-an-ip-or-driver) for how this actually works under the hood |
 
@@ -29,26 +105,40 @@ All three go through the same job shape: `{ id?, token, target, format, data }`.
 
 ## 1. Plain string (`format: "raw"`)
 
-The simplest case — the printer receives exactly what you send, no
-formatting applied. Useful when you already have raw ESC/POS command bytes,
-or just want to push plain lines of text.
+The printer receives exactly the bytes you send, no formatting applied —
+useful when you already have raw ESC/POS command bytes, or just want to
+push plain lines of text.
+
+:::danger `data` must be base64, not literal text
+The agent runs `data` straight through `Buffer.from(data, 'base64')` before
+sending it to the printer. Node's base64 decoder doesn't validate its
+input — it silently skips characters that aren't valid base64 and decodes
+whatever's left, so **sending literal text directly produces garbled bytes
+on the printer with no error anywhere in the chain.** Always base64-encode
+first.
+:::
 
 ```js
-// Vue / JavaScript — WebSocket
+// Vue / JavaScript — encode before sending
+const texto = 'PARQUE AVENTURA\nEntrada general x2      $45.000\nTOTAL          $45.000\n\n\n';
+const dataBase64 = btoa(String.fromCharCode(...new TextEncoder().encode(texto)));
+
 {
   target: 'receipt',
   format: 'raw',
-  data: 'PARQUE AVENTURA\nEntrada general x2      $45.000\nTOTAL          $45.000\n\n\n'
+  data: dataBase64
 }
 ```
 
 ```php
 // PHP — same job, as an HTTP POST
+$texto = "PARQUE AVENTURA\nEntrada general x2      \$45.000\nTOTAL          \$45.000\n\n\n";
+
 $job = [
     'token' => $token,
     'target' => 'receipt',
     'format' => 'raw',
-    'data' => "PARQUE AVENTURA\nEntrada general x2      \$45.000\nTOTAL          \$45.000\n\n\n",
+    'data' => base64_encode($texto), // sin esto, la impresora recibe basura
 ];
 ```
 
@@ -128,6 +218,11 @@ export function usePrintBridge(token) {
     ws.onerror = () => ws.close();
   }
 
+  // Resuelve cuando el job llega a un estado TERMINAL (impreso / fallo
+  // definitivo / error) -- no en el primer mensaje que llega, que es solo
+  // el ack de "encolado" (ver la seccion "Expected responses" mas arriba:
+  // el WS empuja varios mensajes para el mismo jobId a medida que el job
+  // avanza por la cola: encolado -> en_cola -> imprimiendo -> impreso).
   function print({ target, format, data }) {
     return new Promise((resolve, reject) => {
       if (!conectado.value) return reject(new Error('Agente no conectado'));
@@ -135,9 +230,16 @@ export function usePrintBridge(token) {
       const id = crypto.randomUUID();
       const onMessage = (evento) => {
         const respuesta = JSON.parse(evento.data);
-        if (respuesta.id !== id) return; // otro job en vuelo, no es el nuestro
-        ws.removeEventListener('message', onMessage);
-        respuesta.status === 'error' ? reject(new Error(respuesta.mensaje)) : resolve(respuesta);
+        if (respuesta.jobId !== id) return; // otro job en vuelo, no es el nuestro
+
+        if (respuesta.status === 'impreso') {
+          ws.removeEventListener('message', onMessage);
+          resolve(respuesta);
+        } else if (respuesta.status === 'fallo_definitivo' || respuesta.status === 'error') {
+          ws.removeEventListener('message', onMessage);
+          reject(new Error(respuesta.mensaje || respuesta.detalle || 'Fallo al imprimir'));
+        }
+        // encolado / en_cola / imprimiendo: solo progreso, seguimos esperando
       };
       ws.addEventListener('message', onMessage);
       ws.send(JSON.stringify({ id, token, target, format, data }));
@@ -162,11 +264,17 @@ import { usePrintBridge } from './composables/usePrintBridge';
 
 const { conectado, print } = usePrintBridge(import.meta.env.VITE_PRINTBRIDGE_TOKEN);
 
+function aBase64(texto) {
+  // format:'raw' decodifica `data` como base64 -- mandar texto literal sin
+  // esto produce bytes corruptos en la impresora, sin ningun error.
+  return btoa(String.fromCharCode(...new TextEncoder().encode(texto)));
+}
+
 async function imprimirTextoPlano() {
   await print({
     target: 'receipt',
     format: 'raw',
-    data: 'PARQUE AVENTURA\nEntrada general x2   $45.000\n\n\n',
+    data: aBase64('PARQUE AVENTURA\nEntrada general x2   $45.000\n\n\n'),
   });
 }
 
@@ -220,7 +328,10 @@ class PrintBridgeLocal
 
     public function imprimirTexto(string $target, string $texto): array
     {
-        return $this->imprimir($target, 'raw', $texto);
+        // format:'raw' decodifica `data` como base64 -- mandar texto
+        // literal sin esto produce bytes corruptos en la impresora, sin
+        // ningun error en ningun lado de la cadena.
+        return $this->imprimir($target, 'raw', base64_encode($texto));
     }
 
     public function imprimirRecibo(string $target, array $datos): array
@@ -305,8 +416,11 @@ function printBridgeImprimir(string $target, string $format, $data, string $toke
 
 $token = getenv('PRINTBRIDGE_TOKEN_CAJA');
 
-// String plano
-printBridgeImprimir('receipt', 'raw', "PARQUE AVENTURA\nEntrada general x2   \$45.000\n\n\n", $token);
+// String plano -- format:'raw' decodifica `data` como base64, asi que hay
+// que codificar el texto primero (mandarlo literal produce bytes
+// corruptos en la impresora, sin ningun error).
+$texto = "PARQUE AVENTURA\nEntrada general x2   \$45.000\n\n\n";
+printBridgeImprimir('receipt', 'raw', base64_encode($texto), $token);
 
 // HTML
 $html = file_get_contents(__DIR__.'/recibo.html'); // tu propia plantilla
@@ -315,6 +429,12 @@ printBridgeImprimir('receipt', 'html', ['html' => $html, 'ancho_px' => 576], $to
 
 ## Common mistakes
 
+- **Sending literal text with `format: "raw"`.** `data` is decoded as
+  base64 before being sent to the printer — plain text produces garbled
+  output with **no error anywhere**, since Node's base64 decoder doesn't
+  validate its input. Always `base64_encode()` (PHP) or
+  `btoa(...)` (JS) first. This is the easiest mistake to make here because
+  it fails silently instead of throwing.
 - **HTML text too small.** Anything under ~24px body text looks noticeably
   blurry once rasterized to 1-bit — see [§3](#3-html-format-html).
 - **Wrong `ancho_px`.** Must match your printer's actual dot width (576 for
