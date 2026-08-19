@@ -6,6 +6,11 @@ const empresa = ref(null);
 const baseUrl = window.location.origin;
 const copiado = ref('');
 
+// Bump esto cuando se suba un .exe nuevo a /var/www/downloads en el
+// servidor -- el nombre de archivo tiene que coincidir exacto.
+const VERSION_AGENTE = '1.0.0';
+const urlDescarga = `${baseUrl}/downloads/PrintBridge-Setup-${VERSION_AGENTE}.exe`;
+
 onMounted(async () => {
   try {
     empresa.value = (await api.empresa()).data;
@@ -40,18 +45,16 @@ async function copiar(texto, etiqueta) {
 
     <section class="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <h2 class="mb-2 text-sm font-semibold text-slate-700">Paso 1 — Descargar el instalador</h2>
-      <p class="text-sm text-slate-600">
-        El agente es <a href="https://github.com/jonathanlarrarte/printer-agent" target="_blank" rel="noopener" class="underline">código abierto (printer-agent)</a>.
-        Descargá o cloná el repo y generá el instalador:
+      <p class="mb-3 text-sm text-slate-600">
+        Descargá el instalador y llevalo al equipo donde vas a instalar — es el único
+        archivo que necesitás, no hace falta nada más.
       </p>
-      <pre class="mt-3 overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100">git clone https://github.com/jonathanlarrarte/printer-agent.git
-cd printer-agent
-npm install
-npm run dist</pre>
-      <p class="mt-2 text-sm text-slate-600">
-        Esto genera <code class="rounded bg-slate-100 px-1">dist/PrintBridge-Setup-*.exe</code> — es el único
-        archivo que necesitás llevar al equipo donde vas a instalar.
-      </p>
+      <a
+        :href="urlDescarga"
+        class="inline-block rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+      >
+        ⬇ Descargar PrintBridge-Setup-{{ VERSION_AGENTE }}.exe
+      </a>
     </section>
 
     <section class="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
