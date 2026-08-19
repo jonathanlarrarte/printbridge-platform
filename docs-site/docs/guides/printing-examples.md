@@ -205,7 +205,12 @@ export function usePrintBridge(token) {
   let reintentoTimer = null;
 
   function conectar() {
-    ws = new WebSocket('ws://localhost:8181/ws');
+    // Si tu POS esta servido por HTTPS, el navegador bloquea por "mixed
+    // content" cualquier ws:// hacia localhost -- el agente expone el
+    // mismo canal tambien por wss:// en el puerto siguiente (8182 por
+    // defecto) especificamente para este caso.
+    const seguro = window.location.protocol === 'https:';
+    ws = new WebSocket(seguro ? 'wss://localhost:8182/ws' : 'ws://localhost:8181/ws');
 
     ws.onopen = () => { conectado.value = true; };
     ws.onclose = () => {
@@ -429,6 +434,13 @@ printBridgeImprimir('receipt', 'html', ['html' => $html, 'ancho_px' => 576], $to
 
 ## Common mistakes
 
+- **Your POS is served over HTTPS but you're calling `ws://`/`http://` on
+  port 8181.** Browsers block this as mixed content — silently, often with
+  nothing more informative in the console than a generic connection
+  failure. The agent exposes the exact same channel over `wss://`/`https://`
+  on port **8182** by default specifically for this case (see the connect
+  logic above) — no agent-side configuration needed, just point your client
+  at the secure port when your page is HTTPS.
 - **Sending literal text with `format: "raw"`.** `data` is decoded as
   base64 before being sent to the printer — plain text produces garbled
   output with **no error anywhere**, since Node's base64 decoder doesn't

@@ -76,16 +76,19 @@ command language. See the
 For Vue/Laravel-specific examples of printing a plain string vs. HTML, see
 [Printing Examples: Text & HTML](./printing-examples.md).
 
-Each register's agent exposes two channels on `localhost:8181` (port
-configurable):
+Each register's agent exposes two channels, each on two ports (both ports
+configurable): plain on `8181`, and TLS on `8182` — use the secure one if
+your POS itself is served over HTTPS, since browsers block plain
+`ws://`/`http://` calls to localhost from an HTTPS page as mixed content.
 
-- **WebSocket** (`ws://localhost:8181/ws`) — recommended if your POS can hold
-  a persistent connection: confirms queuing instantly and also pushes the
-  final result (printed / failed) asynchronously over the same socket.
-- **HTTP** (`POST /print`) — simple fallback for classic request/response
-  integrations that don't want to manage socket state (typical in existing
-  PHP, Java, or .NET POS back-ends). Only confirms queuing; doesn't push the
-  final result over this channel.
+- **WebSocket** (`ws://localhost:8181/ws` or `wss://localhost:8182/ws`) —
+  recommended if your POS can hold a persistent connection: confirms
+  queuing instantly and also pushes the final result (printed / failed)
+  asynchronously over the same socket.
+- **HTTP** (`POST /print` on either port) — simple fallback for classic
+  request/response integrations that don't want to manage socket state
+  (typical in existing PHP, Java, or .NET POS back-ends). Only confirms
+  queuing; doesn't push the final result over this channel.
 
 In both cases the body is the same job:
 `{ id?, token, target, format, data }` — `token` is that installation's local
