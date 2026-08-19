@@ -54,9 +54,11 @@ app.post('/webhooks/printbridge', express.raw({ type: 'application/json' }), asy
 
 ## Referencia completa
 
-Ver la documentación OpenAPI interactiva en `/docs/api` de tu instancia de
-la plataforma (generada automáticamente con [Scramble](https://scramble.dedoc.co)
-desde las rutas reales — siempre refleja el estado actual de la API).
+Ver la referencia interactiva en `/developers` de tu instancia de la
+plataforma (Docusaurus, generada desde el spec OpenAPI que expone
+[Scramble](https://scramble.dedoc.co) en `/docs/api.json` — corré
+`docs-site/deploy.sh` despues de cualquier cambio a la API para
+regenerarla).
 
 | Método | Descripción |
 |---|---|

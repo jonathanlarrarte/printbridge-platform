@@ -6,17 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Models\Agente;
 use App\Models\ComandoPrueba;
 use App\Models\Impresora;
+use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
+#[Group('Test Print')]
 class PruebaImpresionController extends Controller
 {
     /**
-     * POST /v1/agents/{agenteId}/printers/{impresoraId}/test-print -- deja
-     * un comando pendiente que el agente recoge en su proximo heartbeat
-     * (cada 15-30s) y mete en su cola local igual que un trabajo real
-     * (main/queue.js -> encolar()), asi que despues sigue el mismo camino
-     * de reintentos y reporte que cualquier impresion del POS.
+     * Queue a test print on one of an agent's printers.
+     *
+     * The agent picks this up on its next heartbeat (within 15-30s) and
+     * queues it locally exactly like a real POS print job, so it goes
+     * through the same retries and status reporting.
      */
     public function store(Request $request, int $agenteId, int $impresoraId)
     {

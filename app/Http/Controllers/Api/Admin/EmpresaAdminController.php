@@ -7,6 +7,7 @@ use App\Http\Resources\AgenteResource;
 use App\Models\Agente;
 use App\Models\Empresa;
 use App\Models\EstadisticaAgregada;
+use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
 
 /**
@@ -16,8 +17,12 @@ use Illuminate\Http\Request;
  * para que un endpoint nuevo no pueda "olvidarse" de filtrar por empresa,
  * pero este es el unico lugar donde cruzar ese limite es el objetivo.
  */
+#[Group('Admin', weight: 100)]
 class EmpresaAdminController extends Controller
 {
+    /**
+     * [Super admin] List every company on the platform.
+     */
     public function index()
     {
         // withCount('agentes') sin mas: el global scope BelongsToTenant de
@@ -40,6 +45,12 @@ class EmpresaAdminController extends Controller
         ])]);
     }
 
+    /**
+     * [Super admin] Create a company.
+     *
+     * Unlike self-service signup, companies created here are active
+     * immediately.
+     */
     public function store(Request $request)
     {
         $datos = $request->validate([
@@ -62,6 +73,9 @@ class EmpresaAdminController extends Controller
         ]], 201);
     }
 
+    /**
+     * [Super admin] Get a company's detail: agents, printers, stats, and API keys.
+     */
     public function show(int $id)
     {
         $empresa = Empresa::withoutGlobalScopes()->findOrFail($id);
@@ -83,6 +97,9 @@ class EmpresaAdminController extends Controller
         ]]);
     }
 
+    /**
+     * [Super admin] Activate/deactivate a company, or change its plan.
+     */
     public function update(Request $request, int $id)
     {
         $empresa = Empresa::withoutGlobalScopes()->findOrFail($id);

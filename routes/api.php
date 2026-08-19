@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Admin\EmpresaAdminController;
 use App\Http\Controllers\Api\Admin\ResumenAdminController;
 use App\Http\Controllers\Api\AgenteController;
 use App\Http\Controllers\Api\ApiKeyController;
+use App\Http\Controllers\Api\ApiRootController;
 use App\Http\Controllers\Api\EmpresaController;
 use App\Http\Controllers\Api\EstadisticaController;
 use App\Http\Controllers\Api\PruebaImpresionController;
@@ -24,13 +25,7 @@ Route::get('/health', fn () => response()->json(['ok' => true]));
 // Documento de auto-descubrimiento: el primer lugar donde alguien pega la
 // URL base de la API sin saber nada mas todavia deberia encontrar como
 // seguir, sin necesitar un token.
-Route::get('/v1', fn () => response()->json([
-    'platform' => config('app.name'),
-    'documentation' => url('/docs/api'),
-    'integration_guide' => url('/#/documentacion'),
-    'sign_up' => url('/#/signup'),
-    'authentication' => 'Header "Authorization: Bearer <api_key>" -- generate one in the dashboard (Company > API keys)',
-]));
+Route::get('/v1', ApiRootController::class);
 
 // Signup/login del dashboard: credenciales -> token de empresa (ver AuthController).
 Route::post('/signup', [AuthController::class, 'signup']);

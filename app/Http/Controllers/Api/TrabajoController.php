@@ -6,15 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\TrabajoResource;
 use App\Models\TrabajoImpresion;
 use App\Support\JobStatus;
+use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
+#[Group('Jobs')]
 class TrabajoController extends Controller
 {
     /**
-     * GET /v1/jobs — trabajos_impresion no tiene empresa_id propio, asi
-     * que el aislamiento por tenant se logra con whereHas('agente'): el
-     * global scope de Agente filtra la subquery automaticamente.
+     * List print jobs.
+     *
+     * Filterable by agent, printer, status, and date range.
      */
     public function index(Request $request)
     {
@@ -37,6 +39,11 @@ class TrabajoController extends Controller
         return TrabajoResource::collection($query->paginate());
     }
 
+    /**
+     * Get a print job.
+     *
+     * Includes its full event history.
+     */
     public function show(int $id)
     {
         $trabajo = TrabajoImpresion::whereHas('agente')->with('eventos')->findOrFail($id);

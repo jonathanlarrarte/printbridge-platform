@@ -6,18 +6,25 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\AgenteResource;
 use App\Http\Resources\ImpresoraResource;
 use App\Models\Agente;
+use Dedoc\Scramble\Attributes\Group;
 
+#[Group('Agents')]
 class AgenteController extends Controller
 {
     /**
-     * GET /v1/agents — la lista ya viene filtrada por empresa gracias al
-     * global scope BelongsToTenant en el modelo Agente.
+     * List agents.
+     *
+     * Results are already scoped to your company by the BelongsToTenant
+     * global scope on the Agente model.
      */
     public function index()
     {
         return AgenteResource::collection(Agente::with('impresoras.ultimoTrabajo')->orderBy('id')->paginate());
     }
 
+    /**
+     * Get an agent.
+     */
     public function show(int $id)
     {
         // findOrFail (no route-model-binding) para garantizar que el global
@@ -28,6 +35,9 @@ class AgenteController extends Controller
         return new AgenteResource($agente);
     }
 
+    /**
+     * List an agent's printers.
+     */
     public function impresoras(int $id)
     {
         $agente = Agente::findOrFail($id);

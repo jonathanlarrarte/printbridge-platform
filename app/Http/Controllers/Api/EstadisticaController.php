@@ -4,12 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\EstadisticaAgregada;
+use Dedoc\Scramble\Attributes\Group;
 
+#[Group('Stats')]
 class EstadisticaController extends Controller
 {
     /**
-     * GET /v1/stats/summary — snapshot de toda la empresa
-     * (agente_id null), pre-calculado por app:calcular-estadisticas.
+     * Get company-wide stats.
+     *
+     * A pre-calculated snapshot covering every agent in your company,
+     * refreshed periodically by a scheduled job.
      */
     public function resumen()
     {
@@ -26,7 +30,7 @@ class EstadisticaController extends Controller
     }
 
     /**
-     * GET /v1/stats/agents/{id} — snapshot de un agente puntual.
+     * Get stats for one agent.
      */
     public function agente(int $id)
     {

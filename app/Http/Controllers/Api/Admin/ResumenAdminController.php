@@ -7,6 +7,7 @@ use App\Models\Agente;
 use App\Models\Empresa;
 use App\Models\Impresora;
 use App\Models\TrabajoImpresion;
+use Dedoc\Scramble\Attributes\Group;
 
 /**
  * "Muy general las empresas, como van, cuantos agentes" -- portada del
@@ -15,8 +16,12 @@ use App\Models\TrabajoImpresion;
  * precalcula): el volumen agregado de toda la plataforma es una consulta
  * mucho mas liviana que N consultas por-empresa.
  */
+#[Group('Admin', weight: 100)]
 class ResumenAdminController extends Controller
 {
+    /**
+     * [Super admin] Platform-wide overview across every company.
+     */
     public function show()
     {
         $totalEmpresas = Empresa::withoutGlobalScopes()->count();

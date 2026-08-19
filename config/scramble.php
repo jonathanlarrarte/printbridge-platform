@@ -60,12 +60,12 @@ return [
          * Description rendered on the home page of the API documentation (`/docs/api`).
          */
         'description' => <<<MD
-            API pública de PrintBridge Platform. Autenticación por `Authorization: Bearer <api_key>`
-            (Sanctum) — generá tu API key desde el dashboard, en **Empresa → API keys**.
+            Public API for PrintBridge Platform. Authenticate with `Authorization: Bearer <api_key>`
+            (Sanctum) — generate a key from the dashboard, under **Company → API keys**.
 
-            - Guía de integración paso a paso (agentes, webhooks, SDK): [{$appUrl}/#/documentacion]({$appUrl}/#/documentacion)
-            - ¿Todavía no tenés cuenta?: [crear empresa]({$appUrl}/#/signup)
-            - Documento de auto-descubrimiento (sin auth): `GET /v1`
+            - Step-by-step integration guide (agents, webhooks, SDK): [{$appUrl}/#/documentacion]({$appUrl}/#/documentacion)
+            - Don't have an account yet?: [create a company]({$appUrl}/#/signup)
+            - Unauthenticated discovery document: `GET /v1`
             MD,
     ],
 

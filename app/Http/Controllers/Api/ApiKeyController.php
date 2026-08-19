@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
 
 /**
@@ -12,8 +13,12 @@ use Illuminate\Http\Request;
  * empresa puede tener varias, con nombre, para distinguir integraciones
  * (ej. "produccion", "test", "dashboard").
  */
+#[Group('API Keys')]
 class ApiKeyController extends Controller
 {
+    /**
+     * List API keys.
+     */
     public function index(Request $request)
     {
         $empresa = $request->user();
@@ -28,6 +33,12 @@ class ApiKeyController extends Controller
         ]);
     }
 
+    /**
+     * Create an API key.
+     *
+     * The plaintext token is only ever returned in this response — it isn't
+     * stored anywhere and can't be retrieved again later.
+     */
     public function store(Request $request)
     {
         $datos = $request->validate([
@@ -49,6 +60,9 @@ class ApiKeyController extends Controller
         ], 201);
     }
 
+    /**
+     * Revoke an API key.
+     */
     public function destroy(Request $request, int $id)
     {
         $request->user()->tokens()->where('id', $id)->delete();

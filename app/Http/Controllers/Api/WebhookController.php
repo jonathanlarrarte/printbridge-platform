@@ -7,16 +7,27 @@ use App\Http\Resources\WebhookEntregaResource;
 use App\Http\Resources\WebhookResource;
 use App\Models\WebhookConfigurado;
 use App\Support\EventType;
+use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
+#[Group('Webhooks')]
 class WebhookController extends Controller
 {
+    /**
+     * List webhooks.
+     */
     public function index()
     {
         return WebhookResource::collection(WebhookConfigurado::orderBy('id')->get());
     }
 
+    /**
+     * Create a webhook.
+     *
+     * The returned `secret` is only ever shown in this response — save it
+     * to verify the `X-PrintBridge-Signature` header on deliveries.
+     */
     public function store(Request $request)
     {
         $datos = $request->validate([
@@ -43,6 +54,9 @@ class WebhookController extends Controller
         ], 201);
     }
 
+    /**
+     * Delete a webhook.
+     */
     public function destroy(int $id)
     {
         $webhook = WebhookConfigurado::findOrFail($id);
@@ -51,6 +65,9 @@ class WebhookController extends Controller
         return response()->json(null, 204);
     }
 
+    /**
+     * List delivery attempts for a webhook.
+     */
     public function entregas(int $id)
     {
         $webhook = WebhookConfigurado::findOrFail($id);

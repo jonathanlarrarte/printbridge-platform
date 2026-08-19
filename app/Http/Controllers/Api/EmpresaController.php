@@ -3,14 +3,17 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
 
+#[Group('Company')]
 class EmpresaController extends Controller
 {
     /**
-     * GET /v1/company — perfil de la empresa autenticada. El dashboard lo
-     * usa sobre todo para mostrar el `code` que hace falta al instalar
-     * un agente nuevo (seccion 6.1: POST /agent/register).
+     * Get your company profile.
+     *
+     * The dashboard mainly uses this for `code`, which is what's needed to
+     * register a new agent (`POST /agent/register`).
      */
     public function show(Request $request)
     {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
+use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
 
 /**
@@ -13,8 +14,12 @@ use Illuminate\Http\Request;
  * Api\ApiKeyController (son los mismos tokens Sanctum), solo que resuelto
  * por :empresaId en vez de por el usuario autenticado.
  */
+#[Group('Admin', weight: 100)]
 class ApiKeyAdminController extends Controller
 {
+    /**
+     * [Super admin] Create an API key for a company.
+     */
     public function store(Request $request, int $empresaId)
     {
         $datos = $request->validate(['name' => ['required', 'string', 'max:255']]);
@@ -30,6 +35,9 @@ class ApiKeyAdminController extends Controller
         ], 201);
     }
 
+    /**
+     * [Super admin] Revoke an API key for a company.
+     */
     public function destroy(int $empresaId, int $id)
     {
         $empresa = Empresa::withoutGlobalScopes()->findOrFail($empresaId);

@@ -395,7 +395,7 @@ pb.imprimir("wristband", "tspl", Map.of(
         propio, un job nocturno de reportes, o un servicio que reciba alertas. Autenticación con tu
         API key (<code class="rounded bg-slate-100 px-1">Authorization: Bearer …</code>, generala en
         <router-link :to="{ name: 'empresa' }" class="underline">Empresa → API keys</router-link>).
-        Referencia completa en <a :href="`${baseUrl}/docs/api`" target="_blank" rel="noopener" class="underline">/docs/api</a>.
+        Referencia completa en <a :href="`${baseUrl}/developers`" target="_blank" rel="noopener" class="underline">/developers</a>.
       </p>
 
       <h3 class="mb-2 text-sm font-semibold text-slate-700">Consultar el estado de todas las sucursales</h3>

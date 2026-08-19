@@ -74,9 +74,9 @@ const ENDPOINTS = [
           </tr>
         </tbody>
       </table>
-      <a :href="`${baseUrl}/docs/api`" target="_blank" rel="noopener"
+      <a :href="`${baseUrl}/developers`" target="_blank" rel="noopener"
          class="mt-4 inline-block rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800">
-        Ver referencia completa (OpenAPI) →
+        Ver referencia completa de la API →
       </a>
     </section>
 
