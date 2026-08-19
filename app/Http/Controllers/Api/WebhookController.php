@@ -31,7 +31,9 @@ class WebhookController extends Controller
     public function store(Request $request)
     {
         $datos = $request->validate([
+            /** Your HTTPS endpoint -- must respond within 10s or the attempt counts as failed. */
             'url' => ['required', 'url', 'max:2048'],
+            /** Which event types to receive: `job.created`, `job.printing`, `job.printed`, `job.failed`, `agent.online`, `agent.offline`. */
             'subscribed_events' => ['required', 'array', 'min:1'],
             'subscribed_events.*' => [Rule::in(EventType::ALL)],
         ]);
@@ -48,8 +50,7 @@ class WebhookController extends Controller
 
         return response()->json([
             'data' => new WebhookResource($webhook),
-            // Unica vez que se devuelve en texto plano -- lo necesita el
-            // cliente para verificar X-PrintBridge-Signature (seccion 8.2).
+            /** The HMAC-SHA256 signing secret for this webhook -- shown here once, never again. Store it now; you'll need it to verify `X-PrintBridge-Signature` on every delivery. */
             'secret' => $secreto,
         ], 201);
     }

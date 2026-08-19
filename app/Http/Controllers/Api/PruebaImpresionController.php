@@ -30,6 +30,7 @@ class PruebaImpresionController extends Controller
         $comando = $this->crearComando($agente, $impresora);
 
         return response()->json(['data' => [
+            /** ID for this test-print job. It follows the same lifecycle as any real print job (poll `GET /v1/jobs?agent_id=...` or subscribe to `job.printed`/`job.failed` webhooks to see the outcome), but you won't find it in your own POS records since PrintBridge generated it, not you. */
             'external_job_id' => $comando->job_id_externo,
             'message' => 'Queued. The agent will print it on its next heartbeat (up to 30s).',
         ]], 202);

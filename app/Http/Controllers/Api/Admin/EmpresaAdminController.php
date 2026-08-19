@@ -37,8 +37,10 @@ class EmpresaAdminController extends Controller
         return response()->json(['data' => $empresas->map(fn ($e) => [
             'id' => $e->id,
             'name' => $e->nombre,
+            /** Their client code -- what their agents use to self-register. */
             'code' => $e->codigo,
             'plan' => $e->plan,
+            /** `false` means this company signed up but you haven't activated them yet -- they can't log in until you do (`PATCH .../{id}` with `active: true`). */
             'active' => $e->activo,
             'agents_count' => $e->agentes_count,
             'created_at' => $e->created_at,
@@ -55,6 +57,7 @@ class EmpresaAdminController extends Controller
     {
         $datos = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            /** Defaults to `"piloto"` if omitted -- freeform, not validated against a fixed list. */
             'plan' => ['nullable', 'string', 'max:50'],
         ]);
 
@@ -89,6 +92,7 @@ class EmpresaAdminController extends Controller
                 'plan' => $empresa->plan, 'active' => $empresa->activo, 'created_at' => $empresa->created_at,
             ],
             'agents' => AgenteResource::collection($agentes),
+            /** Same shape as `GET /v1/stats/summary` for this company. Null if stats haven't been calculated for them yet. */
             'stats' => $estadisticas?->datos,
             'stats_calculated_at' => $estadisticas?->calculado_en,
             'api_keys' => $empresa->tokens()->orderByDesc('id')->get()->map(fn ($t) => [
@@ -105,6 +109,7 @@ class EmpresaAdminController extends Controller
         $empresa = Empresa::withoutGlobalScopes()->findOrFail($id);
 
         $datos = $request->validate([
+            /** Set `true` to activate a pending signup (they can't log in until then) or `false` to suspend an existing company. */
             'active' => ['sometimes', 'boolean'],
             'plan' => ['sometimes', 'string', 'max:50'],
         ]);

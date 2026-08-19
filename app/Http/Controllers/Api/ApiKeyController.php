@@ -26,7 +26,9 @@ class ApiKeyController extends Controller
         return response()->json([
             'data' => $empresa->tokens()->orderByDesc('id')->get()->map(fn ($t) => [
                 'id' => $t->id,
+                /** Label you gave this key when creating it (e.g. "production", "dashboard") -- purely for your own reference, not used for anything functionally. */
                 'name' => $t->name,
+                /** When this key last authenticated a request. Null if it's never been used. */
                 'last_used_at' => $t->last_used_at,
                 'created_at' => $t->created_at,
             ]),
@@ -42,6 +44,7 @@ class ApiKeyController extends Controller
     public function store(Request $request)
     {
         $datos = $request->validate([
+            /** A label to help you tell this key apart from others later (e.g. "production", "test"). */
             'name' => ['required', 'string', 'max:255'],
         ]);
 
@@ -55,7 +58,7 @@ class ApiKeyController extends Controller
                 'name' => $nuevo->accessToken->name,
                 'created_at' => $nuevo->accessToken->created_at,
             ],
-            // Unica vez que se devuelve en texto plano.
+            /** The actual Bearer token -- shown here once, never again. This is what you put in `Authorization: Bearer <token>` for every `/v1/*` request. */
             'token' => $nuevo->plainTextToken,
         ], 201);
     }

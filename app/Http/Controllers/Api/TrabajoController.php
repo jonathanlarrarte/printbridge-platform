@@ -21,10 +21,15 @@ class TrabajoController extends Controller
     public function index(Request $request)
     {
         $datos = $request->validate([
+            /** Only jobs belonging to this agent. */
             'agent_id' => ['nullable', 'integer'],
+            /** Only jobs sent to this printer. */
             'printer_id' => ['nullable', 'integer'],
+            /** Only jobs currently in this status. */
             'status' => ['nullable', 'string', Rule::in(JobStatus::valoresApi())],
+            /** Only jobs created on or after this date/time (ISO 8601). */
             'from' => ['nullable', 'date'],
+            /** Only jobs created on or before this date/time (ISO 8601). */
             'to' => ['nullable', 'date'],
         ]);
 

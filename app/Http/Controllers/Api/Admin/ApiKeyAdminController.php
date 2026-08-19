@@ -22,7 +22,10 @@ class ApiKeyAdminController extends Controller
      */
     public function store(Request $request, int $empresaId)
     {
-        $datos = $request->validate(['name' => ['required', 'string', 'max:255']]);
+        $datos = $request->validate([
+            /** A label for this key -- purely for reference, shown back to the company in their own dashboard. */
+            'name' => ['required', 'string', 'max:255'],
+        ]);
 
         $empresa = Empresa::withoutGlobalScopes()->findOrFail($empresaId);
         // 'tenant', nunca '*' -- un token generado por el admin para un
@@ -31,6 +34,7 @@ class ApiKeyAdminController extends Controller
 
         return response()->json([
             'data' => ['id' => $nuevo->accessToken->id, 'name' => $nuevo->accessToken->name, 'created_at' => $nuevo->accessToken->created_at],
+            /** The actual Bearer token for the company you generated it for -- shown once, never again. Hand this to them directly; it works exactly like a key they'd generate themselves. */
             'token' => $nuevo->plainTextToken,
         ], 201);
     }

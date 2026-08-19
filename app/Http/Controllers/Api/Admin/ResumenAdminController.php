@@ -59,19 +59,27 @@ class ResumenAdminController extends Controller
             ->map(fn ($e) => ['id' => $e->id, 'name' => $e->nombre, 'code' => $e->codigo, 'active' => $e->activo, 'agents_count' => $e->agentes_count]);
 
         return response()->json(['data' => [
+            /** Across every company on the platform, regardless of who's calling. */
             'companies' => [
                 'total' => $totalEmpresas,
                 'active' => $empresasActivas,
+                /** Signed up but not yet activated -- same meaning as `active: false` on the companies endpoints. */
                 'pending' => $totalEmpresas - $empresasActivas,
             ],
+            /** Across every company. `online` means a heartbeat arrived in the last 60s. */
             'agents' => ['total' => $totalAgentes, 'online' => $agentesOnline],
+            /** Across every company's agents. */
             'printers' => ['total' => $totalImpresoras, 'online' => $impresorasOnline],
+            /** Jobs completed in the last 24h, platform-wide (not per-company). */
             'jobs_24h' => [
                 'printed' => $impresos24h,
                 'failed' => $fallidos24h,
+                /** Null if there were zero jobs in the window (avoids a division by zero, not a real 0%). */
                 'success_rate' => ($impresos24h + $fallidos24h) > 0 ? round($impresos24h / ($impresos24h + $fallidos24h), 4) : null,
             ],
+            /** Daily job counts for the last 7 days, platform-wide -- what the admin dashboard's bar chart is built from. */
             'volume_by_day' => $volumenPorDia,
+            /** The 5 companies with the most agents, for a quick "who's actually using this" glance. */
             'top_companies' => $topEmpresas,
         ]]);
     }

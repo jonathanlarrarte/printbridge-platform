@@ -22,6 +22,7 @@ class EmpresaController extends Controller
         return response()->json(['data' => [
             'id' => $empresa->id,
             'name' => $empresa->nombre,
+            /** Your client code -- what an agent needs to self-register (`POST /agent/register`). Shared by every agent across every branch of this company. */
             'code' => $empresa->codigo,
             'plan' => $empresa->plan,
             'active' => $empresa->activo,

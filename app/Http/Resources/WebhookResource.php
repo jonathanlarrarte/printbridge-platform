@@ -16,7 +16,9 @@ class WebhookResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            /** Where deliveries get POSTed, signed with `X-PrintBridge-Signature`. */
             'url' => $this->url,
+            /** Which event types trigger a delivery to this webhook -- see `event_type` on the events resource for the full catalog. */
             'subscribed_events' => $this->eventos_suscritos,
             'active' => $this->activo,
             'created_at' => $this->creado_en,
