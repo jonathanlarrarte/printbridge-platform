@@ -1,20 +1,26 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { api } from '../../api';
+import { useAutoRefresh } from '../../composables/useAutoRefresh';
 
 const datos = ref(null);
 const cargando = ref(true);
 const error = ref('');
 
-onMounted(async () => {
+async function cargar() {
+  if (!datos.value) cargando.value = true;
   try {
     datos.value = (await api.adminResumen()).data;
+    error.value = '';
   } catch (e) {
     error.value = e.message;
   } finally {
     cargando.value = false;
   }
-});
+}
+
+onMounted(cargar);
+useAutoRefresh(cargar, 20000);
 
 const tasaExitoPct = computed(() => {
   const t = datos.value?.jobs_24h?.success_rate;

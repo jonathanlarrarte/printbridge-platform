@@ -1,20 +1,28 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { api } from '../api';
+import { useAutoRefresh } from '../composables/useAutoRefresh';
 
 const datos = ref(null);
 const cargando = ref(true);
 const error = ref('');
 
-onMounted(async () => {
+async function cargar() {
+  if (!datos.value) cargando.value = true;
   try {
     datos.value = await api.estadisticasResumen();
+    error.value = '';
   } catch (e) {
     error.value = e.status === 404 ? 'Todavía no hay estadísticas calculadas (el job corre cada 5 min).' : 'No se pudieron cargar las estadísticas.';
   } finally {
     cargando.value = false;
   }
-});
+}
+
+onMounted(cargar);
+// Las estadisticas se precalculan cada 5 min del lado del servidor -- no
+// tiene sentido pollear cada 20s como el resto de las paginas.
+useAutoRefresh(cargar, 60000);
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 </script>

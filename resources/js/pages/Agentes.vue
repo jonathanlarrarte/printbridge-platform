@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
 import { api } from '../api';
+import { useAutoRefresh } from '../composables/useAutoRefresh';
 
 const agentes = ref([]);
 const cargando = ref(true);
@@ -8,9 +9,13 @@ const error = ref('');
 const estadoPrueba = reactive({}); // { [impresoraId]: 'enviando' | 'enviado' | 'error' }
 
 async function cargar() {
+  // Solo muestra "Cargando..." la primera vez -- los refrescos automaticos
+  // de fondo no deberian hacer parpadear la lista que ya esta en pantalla.
+  if (!agentes.value.length) cargando.value = true;
   try {
     const respuesta = await api.agentes();
     agentes.value = respuesta.data;
+    error.value = '';
   } catch {
     error.value = 'No se pudieron cargar los agentes.';
   } finally {
@@ -19,6 +24,7 @@ async function cargar() {
 }
 
 onMounted(cargar);
+useAutoRefresh(cargar, 20000);
 
 function formatoFecha(f) {
   return f ? new Date(f).toLocaleString() : '—';

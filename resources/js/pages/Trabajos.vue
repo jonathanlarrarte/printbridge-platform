@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue';
 import { api } from '../api';
+import { useAutoRefresh } from '../composables/useAutoRefresh';
 
 const trabajos = ref([]);
 const cargando = ref(true);
@@ -10,11 +11,11 @@ const filtroEstado = ref('');
 const ESTADOS = ['pending', 'queued', 'printing', 'printed', 'failed'];
 
 async function cargar() {
-  cargando.value = true;
-  error.value = '';
+  if (!trabajos.value.length) cargando.value = true;
   try {
     const respuesta = await api.trabajos({ status: filtroEstado.value || undefined });
     trabajos.value = respuesta.data;
+    error.value = '';
   } catch {
     error.value = 'No se pudieron cargar los trabajos.';
   } finally {
@@ -24,6 +25,7 @@ async function cargar() {
 
 onMounted(cargar);
 watch(filtroEstado, cargar);
+useAutoRefresh(cargar, 20000);
 
 function badge(estado) {
   return {
