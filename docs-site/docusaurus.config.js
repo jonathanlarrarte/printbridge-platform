@@ -53,7 +53,14 @@ const config = {
             downloadUrl: 'https://impryxa.vekronis.com/docs/api.json',
             sidebarOptions: {
               groupPathsBy: 'tag',
-              categoryLinkSource: 'auto',
+              // Neither 'tag' (crashes at build time -- upstream bug in
+              // useCurrentSidebarCategory with this plugin version) nor
+              // 'auto' (generates a sidebar link to a /category/* page
+              // Docusaurus never actually builds, i.e. a dead link) work
+              // here. Omitting this makes category headers plain
+              // expand/collapse toggles with no link -- every endpoint is
+              // still reachable directly from the sidebar, just not via a
+              // per-category landing page.
             },
           },
         },
