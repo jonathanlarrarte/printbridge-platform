@@ -8,7 +8,7 @@ const copiado = ref('');
 
 // Bump esto cuando se suba un .exe nuevo a /var/www/downloads en el
 // servidor -- el nombre de archivo tiene que coincidir exacto.
-const VERSION_AGENTE = '1.0.0';
+const VERSION_AGENTE = '1.1.0';
 const urlDescarga = `${baseUrl}/downloads/PrintBridge-Setup-${VERSION_AGENTE}.exe`;
 
 onMounted(async () => {
