@@ -56,7 +56,7 @@ class EstadisticaController extends Controller
             'success_rate_by_printer' => $datos['success_rate_by_printer'],
             /** Average time from "printing" to "printed" across every successful job, in milliseconds. Null if nothing has printed successfully yet. */
             'average_print_time_ms' => $datos['average_print_time_ms'],
-            /** Uptime percentage per agent over 24h/7d/30d windows, reconstructed from `agent.online`/`agent.offline` events. Each entry: `{ agent_id, installation_id, uptime_24h, uptime_7d, uptime_30d }`. On `GET /v1/stats/agents/{id}` this array has exactly one entry. */
+            /** Uptime percentage per agent over 24h/7d/30d windows, reconstructed from `agent.online`/`agent.offline` events. Each entry: `{ agent_id, installation_id, agent_name, uptime_24h, uptime_7d, uptime_30d }`. On `GET /v1/stats/agents/{id}` this array has exactly one entry. */
             'uptime_by_agent' => $datos['uptime_by_agent'],
             /** The most common failure messages, most frequent first. Each entry: `{ error_message, count }`. */
             'error_distribution' => $datos['error_distribution'],

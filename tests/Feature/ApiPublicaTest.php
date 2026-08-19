@@ -6,6 +6,7 @@ use App\Models\Agente;
 use App\Models\Empresa;
 use App\Models\TrabajoImpresion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -63,6 +64,28 @@ class ApiPublicaTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.external_job_id', 'j1');
+    }
+
+    public function test_trabajos_incluyen_nombre_de_agente_y_marca_de_prueba(): void
+    {
+        $empresa = Empresa::create(['nombre' => 'A', 'codigo' => 'a', 'plan' => 'piloto', 'activo' => true]);
+        $agenteConNombre = Agente::create(['empresa_id' => $empresa->id, 'instalacion_id' => 'pos-a', 'nombre_descriptivo' => 'Caja 3', 'token_hash' => 'x', 'estado' => 'online', 'creado_en' => now()]);
+        $agenteSinNombre = Agente::create(['empresa_id' => $empresa->id, 'instalacion_id' => 'pos-b', 'token_hash' => 'y', 'estado' => 'online', 'creado_en' => now()]);
+
+        TrabajoImpresion::create(['agente_id' => $agenteConNombre->id, 'job_id_externo' => 'orden-123', 'target' => 'receipt', 'estado' => 'impreso']);
+        TrabajoImpresion::create(['agente_id' => $agenteSinNombre->id, 'job_id_externo' => 'prueba-'.Str::uuid(), 'target' => 'receipt', 'estado' => 'impreso']);
+
+        $token = $empresa->createToken('t')->plainTextToken;
+        $respuesta = $this->getJson('/v1/jobs', ['Authorization' => "Bearer {$token}"])->assertOk();
+
+        // Nombre real si esta configurado, sino cae al installation_id.
+        $conNombre = collect($respuesta->json('data'))->firstWhere('external_job_id', 'orden-123');
+        $this->assertSame('Caja 3', $conNombre['agent_name']);
+        $this->assertFalse($conNombre['is_test']);
+
+        $sinNombre = collect($respuesta->json('data'))->first(fn ($t) => str_starts_with($t['external_job_id'], 'prueba-'));
+        $this->assertSame('pos-b', $sinNombre['agent_name']);
+        $this->assertTrue($sinNombre['is_test']);
     }
 
     public function test_estadisticas_agente_de_otra_empresa_da_404(): void

@@ -34,6 +34,7 @@ class TrabajoController extends Controller
         ]);
 
         $query = TrabajoImpresion::whereHas('agente')
+            ->with('agente')
             ->when($datos['agent_id'] ?? null, fn ($q, $v) => $q->where('agente_id', $v))
             ->when($datos['printer_id'] ?? null, fn ($q, $v) => $q->where('impresora_id', $v))
             ->when($datos['status'] ?? null, fn ($q, $v) => $q->where('estado', JobStatus::toInternal($v)))
@@ -51,7 +52,7 @@ class TrabajoController extends Controller
      */
     public function show(int $id)
     {
-        $trabajo = TrabajoImpresion::whereHas('agente')->with('eventos')->findOrFail($id);
+        $trabajo = TrabajoImpresion::whereHas('agente')->with(['agente', 'eventos'])->findOrFail($id);
 
         return new TrabajoResource($trabajo);
     }

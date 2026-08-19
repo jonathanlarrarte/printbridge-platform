@@ -164,6 +164,7 @@ class CalcularEstadisticas extends Command
         return [
             'agent_id' => $agente->id,
             'installation_id' => $agente->instalacion_id,
+            'agent_name' => $agente->nombre_descriptivo ?: $agente->instalacion_id,
             'uptime_24h' => $this->calcularUptime($agente, $ahora->copy()->subDay(), $ahora),
             'uptime_7d' => $this->calcularUptime($agente, $ahora->copy()->subDays(7), $ahora),
             'uptime_30d' => $this->calcularUptime($agente, $ahora->copy()->subDays(30), $ahora),

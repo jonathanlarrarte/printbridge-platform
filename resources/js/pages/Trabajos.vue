@@ -4,16 +4,21 @@ import { api } from '../api';
 import { useAutoRefresh } from '../composables/useAutoRefresh';
 
 const trabajos = ref([]);
+const agentes = ref([]);
 const cargando = ref(true);
 const error = ref('');
 const filtroEstado = ref('');
+const filtroAgente = ref('');
 
 const ESTADOS = ['pending', 'queued', 'printing', 'printed', 'failed'];
 
 async function cargar() {
   if (!trabajos.value.length) cargando.value = true;
   try {
-    const respuesta = await api.trabajos({ status: filtroEstado.value || undefined });
+    const respuesta = await api.trabajos({
+      status: filtroEstado.value || undefined,
+      agent_id: filtroAgente.value || undefined,
+    });
     trabajos.value = respuesta.data;
     error.value = '';
   } catch {
@@ -23,8 +28,15 @@ async function cargar() {
   }
 }
 
-onMounted(cargar);
-watch(filtroEstado, cargar);
+onMounted(async () => {
+  cargar();
+  try {
+    agentes.value = (await api.agentes()).data;
+  } catch {
+    // el filtro por agente simplemente no aparece si esto falla
+  }
+});
+watch([filtroEstado, filtroAgente], cargar);
 useAutoRefresh(cargar, 20000);
 
 function badge(estado) {
@@ -40,10 +52,16 @@ function badge(estado) {
   <div>
     <div class="mb-6 flex items-center justify-between">
       <h1 class="text-lg font-semibold">Trabajos de impresión</h1>
-      <select v-model="filtroEstado" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm">
-        <option value="">Todos los estados</option>
-        <option v-for="e in ESTADOS" :key="e" :value="e">{{ e }}</option>
-      </select>
+      <div class="flex gap-2">
+        <select v-model="filtroAgente" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm">
+          <option value="">Todos los puntos</option>
+          <option v-for="a in agentes" :key="a.id" :value="a.id">{{ a.display_name || a.installation_id }}</option>
+        </select>
+        <select v-model="filtroEstado" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm">
+          <option value="">Todos los estados</option>
+          <option v-for="e in ESTADOS" :key="e" :value="e">{{ e }}</option>
+        </select>
+      </div>
     </div>
 
     <p v-if="cargando" class="text-sm text-slate-500">Cargando…</p>
@@ -63,8 +81,11 @@ function badge(estado) {
       </thead>
       <tbody class="divide-y divide-slate-100">
         <tr v-for="t in trabajos" :key="t.id">
-          <td class="px-4 py-3 font-mono text-xs">{{ t.external_job_id }}</td>
-          <td class="px-4 py-3">#{{ t.agent_id }}</td>
+          <td class="px-4 py-3">
+            <span v-if="t.is_test" class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">Prueba</span>
+            <span v-else class="font-mono text-xs">{{ t.external_job_id }}</span>
+          </td>
+          <td class="px-4 py-3">{{ t.agent_name }}</td>
           <td class="px-4 py-3">{{ t.target }}</td>
           <td class="px-4 py-3">
             <span class="rounded-full px-2 py-0.5 text-xs" :class="badge(t.status)">{{ t.status }}</span>
