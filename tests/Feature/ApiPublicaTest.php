@@ -89,6 +89,24 @@ class ApiPublicaTest extends TestCase
         $this->assertTrue($sinNombre['is_test']);
     }
 
+    public function test_v1_agents_no_pagina_a_15_por_defecto(): void
+    {
+        // Regresion: sin un per_page explicito, paginate() por defecto de
+        // Laravel corta en 15 -- una empresa con mas agentes que eso
+        // (una cadena real, no un piloto) solo veia los primeros 15 en el
+        // dashboard, sin ningun paginador en la UI para llegar al resto.
+        $empresa = Empresa::create(['nombre' => 'A', 'codigo' => 'a', 'plan' => 'piloto', 'activo' => true]);
+        for ($i = 0; $i < 20; $i++) {
+            Agente::create(['empresa_id' => $empresa->id, 'instalacion_id' => "pos-{$i}", 'token_hash' => 'x', 'estado' => 'online', 'creado_en' => now()]);
+        }
+
+        $token = $empresa->createToken('t')->plainTextToken;
+
+        $this->getJson('/v1/agents', ['Authorization' => "Bearer {$token}"])
+            ->assertOk()
+            ->assertJsonCount(20, 'data');
+    }
+
     public function test_borrar_agente_libera_su_installation_id_para_otra_empresa(): void
     {
         $empresaA = Empresa::create(['nombre' => 'A', 'codigo' => 'a', 'plan' => 'piloto', 'activo' => true]);

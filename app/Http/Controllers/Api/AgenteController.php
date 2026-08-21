@@ -7,6 +7,8 @@ use App\Http\Resources\AgenteResource;
 use App\Http\Resources\ImpresoraResource;
 use App\Models\Agente;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\QueryParameter;
+use Illuminate\Http\Request;
 
 #[Group('Agents')]
 class AgenteController extends Controller
@@ -17,9 +19,20 @@ class AgenteController extends Controller
      * Results are already scoped to your company by the BelongsToTenant
      * global scope on the Agente model.
      */
-    public function index()
+    #[QueryParameter('per_page', description: 'Results per page, up to 200. Defaults to 200 -- this listing is meant to be viewed as a full fleet, not paged through.', type: 'integer')]
+    public function index(Request $request)
     {
-        return AgenteResource::collection(Agente::with('impresoras.ultimoTrabajo')->orderBy('id')->paginate());
+        // Default bien mas alto que el estandar de Laravel (15): a
+        // diferencia de un listado paginado clasico, el dashboard de
+        // Agentes es un "tablero" -- se espera ver la flota completa de un
+        // vistazo, no ir pasando de pagina. 200 cubre cadenas grandes
+        // (decenas de sucursales x varias cajas c/u) sin dejar de ser un
+        // limite real.
+        $porPagina = min((int) $request->query('per_page', 200), 200);
+
+        return AgenteResource::collection(
+            Agente::with('impresoras.ultimoTrabajo')->orderBy('id')->paginate($porPagina)
+        );
     }
 
     /**
