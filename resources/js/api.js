@@ -76,6 +76,7 @@ export const api = {
 
   agentes: () => llamar('/v1/agents'),
   agente: (id) => llamar(`/v1/agents/${id}`),
+  borrarAgente: (id) => llamar(`/v1/agents/${id}`, { method: 'DELETE' }),
   enviarPruebaImpresion: (agenteId, impresoraId) =>
     llamar(`/v1/agents/${agenteId}/printers/${impresoraId}/test-print`, { method: 'POST' }),
 

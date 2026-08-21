@@ -44,4 +44,23 @@ class AgenteController extends Controller
 
         return ImpresoraResource::collection($agente->impresoras()->with('ultimoTrabajo')->get());
     }
+
+    /**
+     * Delete an agent.
+     *
+     * This is permanent and cascades: every printer, job, event, and
+     * test-print for this agent is deleted with it -- there's no undo. The
+     * main reason to use this is to free up an `installation_id` that was
+     * accidentally registered to the wrong company, so it can be
+     * re-registered elsewhere (`POST /agent/register` rejects an
+     * `installation_id` that's already claimed by a *different* company
+     * with a 409).
+     */
+    public function destroy(int $id)
+    {
+        $agente = Agente::findOrFail($id);
+        $agente->delete();
+
+        return response()->json(null, 204);
+    }
 }

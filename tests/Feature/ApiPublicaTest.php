@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Agente;
 use App\Models\Empresa;
+use App\Models\Impresora;
 use App\Models\TrabajoImpresion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -86,6 +87,46 @@ class ApiPublicaTest extends TestCase
         $sinNombre = collect($respuesta->json('data'))->first(fn ($t) => str_starts_with($t['external_job_id'], 'test-print-'));
         $this->assertSame('pos-b', $sinNombre['agent_name']);
         $this->assertTrue($sinNombre['is_test']);
+    }
+
+    public function test_borrar_agente_libera_su_installation_id_para_otra_empresa(): void
+    {
+        $empresaA = Empresa::create(['nombre' => 'A', 'codigo' => 'a', 'plan' => 'piloto', 'activo' => true]);
+        $empresaB = Empresa::create(['nombre' => 'B', 'codigo' => 'b', 'plan' => 'piloto', 'activo' => true]);
+        $agente = Agente::create(['empresa_id' => $empresaA->id, 'instalacion_id' => 'pos-mal-asociado', 'token_hash' => 'x', 'estado' => 'online', 'creado_en' => now()]);
+        $impresora = Impresora::create(['agente_id' => $agente->id, 'alias' => 'receipt', 'tipo' => 'red', 'estado_heartbeat' => 'online', 'actualizado_en' => now()]);
+        TrabajoImpresion::create(['agente_id' => $agente->id, 'impresora_id' => $impresora->id, 'job_id_externo' => 'j1', 'target' => 'receipt', 'estado' => 'impreso']);
+
+        // Registrar el mismo installation_id contra la empresa equivocada
+        // (B, mientras el agente sigue en A) tiene que rechazarse -- este
+        // es exactamente el escenario que "eliminar" resuelve.
+        $this->postJson('/agent/register', ['installation_id' => 'pos-mal-asociado', 'client_code' => 'b'])
+            ->assertConflict();
+
+        $tokenA = $empresaA->createToken('t')->plainTextToken;
+        $this->deleteJson("/v1/agents/{$agente->id}", [], ['Authorization' => "Bearer {$tokenA}"])
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('agentes', ['id' => $agente->id]);
+        $this->assertDatabaseMissing('impresoras', ['id' => $impresora->id]);
+        $this->assertDatabaseMissing('trabajos_impresion', ['agente_id' => $agente->id]);
+
+        // Ahora que el installation_id quedo libre, B si puede registrarlo.
+        $this->postJson('/agent/register', ['installation_id' => 'pos-mal-asociado', 'client_code' => 'b'])
+            ->assertOk();
+    }
+
+    public function test_no_se_puede_borrar_un_agente_de_otra_empresa(): void
+    {
+        $empresaA = Empresa::create(['nombre' => 'A', 'codigo' => 'a', 'plan' => 'piloto', 'activo' => true]);
+        $empresaB = Empresa::create(['nombre' => 'B', 'codigo' => 'b', 'plan' => 'piloto', 'activo' => true]);
+        $agenteB = Agente::create(['empresa_id' => $empresaB->id, 'instalacion_id' => 'pos-b', 'token_hash' => 'y', 'estado' => 'online', 'creado_en' => now()]);
+
+        $tokenA = $empresaA->createToken('t')->plainTextToken;
+        $this->deleteJson("/v1/agents/{$agenteB->id}", [], ['Authorization' => "Bearer {$tokenA}"])
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('agentes', ['id' => $agenteB->id]);
     }
 
     public function test_estadisticas_agente_de_otra_empresa_da_404(): void

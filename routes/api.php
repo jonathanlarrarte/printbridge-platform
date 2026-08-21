@@ -47,6 +47,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'empresa.activa'])->group(funct
     Route::get('/agents', [AgenteController::class, 'index']);
     Route::get('/agents/{id}', [AgenteController::class, 'show']);
     Route::get('/agents/{id}/printers', [AgenteController::class, 'impresoras']);
+    Route::delete('/agents/{id}', [AgenteController::class, 'destroy']);
     Route::post('/agents/{agenteId}/printers/{impresoraId}/test-print', [PruebaImpresionController::class, 'store']);
 
     Route::get('/jobs', [TrabajoController::class, 'index']);
