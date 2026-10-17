@@ -27,7 +27,9 @@ class TrabajoRemotoTest extends TestCase
         [$empresa, $agente, $impresora] = $this->empresaConAgenteYImpresora();
         $headers = ['Authorization' => 'Bearer '.$empresa->createToken('t', ['tenant'])->plainTextToken];
 
-        $respuesta = $this->postJson("/v1/agents/{$agente->id}/printers/{$impresora->id}/jobs", [
+        $respuesta = $this->postJson('/v1/agents/print', [
+            'agent_id' => $agente->id,
+            'target' => 'receipt',
             'format' => 'html',
             'data' => '<h1>Recibo</h1>',
         ], $headers);
@@ -44,10 +46,12 @@ class TrabajoRemotoTest extends TestCase
 
     public function test_acepta_un_external_job_id_propio_y_lo_devuelve_igual(): void
     {
-        [$empresa, $agente, $impresora] = $this->empresaConAgenteYImpresora();
+        [$empresa, $agente] = $this->empresaConAgenteYImpresora();
         $headers = ['Authorization' => 'Bearer '.$empresa->createToken('t', ['tenant'])->plainTextToken];
 
-        $respuesta = $this->postJson("/v1/agents/{$agente->id}/printers/{$impresora->id}/jobs", [
+        $respuesta = $this->postJson('/v1/agents/print', [
+            'agent_id' => $agente->id,
+            'target' => 'receipt',
             'format' => 'raw',
             'data' => base64_encode('ESC/POS crudo'),
             'external_job_id' => 'orden-1001',
@@ -59,16 +63,16 @@ class TrabajoRemotoTest extends TestCase
 
     public function test_reenviar_el_mismo_external_job_id_no_duplica_el_trabajo(): void
     {
-        [$empresa, $agente, $impresora] = $this->empresaConAgenteYImpresora();
+        [$empresa, $agente] = $this->empresaConAgenteYImpresora();
         $headers = ['Authorization' => 'Bearer '.$empresa->createToken('t', ['tenant'])->plainTextToken];
-        $cuerpo = ['format' => 'html', 'data' => '<p>x</p>', 'external_job_id' => 'orden-dup'];
+        $cuerpo = ['agent_id' => $agente->id, 'target' => 'receipt', 'format' => 'html', 'data' => '<p>x</p>', 'external_job_id' => 'orden-dup'];
 
-        $this->postJson("/v1/agents/{$agente->id}/printers/{$impresora->id}/jobs", $cuerpo, $headers)->assertStatus(202);
+        $this->postJson('/v1/agents/print', $cuerpo, $headers)->assertStatus(202);
 
         // Reintento tipico de red (el cliente no recibio la respuesta a tiempo
         // y reenvia el mismo request): no debe crear un segundo comando, o el
         // agente imprimiria el mismo recibo dos veces.
-        $this->postJson("/v1/agents/{$agente->id}/printers/{$impresora->id}/jobs", $cuerpo, $headers)
+        $this->postJson('/v1/agents/print', $cuerpo, $headers)
             ->assertStatus(200)
             ->assertJsonPath('data.external_job_id', 'orden-dup');
 
@@ -105,24 +109,34 @@ class TrabajoRemotoTest extends TestCase
         $this->assertSame(2, ComandoPrueba::where('job_id_externo', 'order-1')->count());
     }
 
-    public function test_no_se_puede_enviar_un_trabajo_a_una_impresora_de_otra_empresa(): void
+    public function test_no_se_puede_enviar_un_trabajo_a_un_agente_de_otra_empresa(): void
     {
-        [, $agenteB, $impresoraB] = $this->empresaConAgenteYImpresora('b');
+        [, $agenteB] = $this->empresaConAgenteYImpresora('b');
         $empresaA = Empresa::create(['nombre' => 'A', 'codigo' => 'a', 'plan' => 'piloto', 'activo' => true]);
         $headers = ['Authorization' => 'Bearer '.$empresaA->createToken('t', ['tenant'])->plainTextToken];
 
-        $this->postJson("/v1/agents/{$agenteB->id}/printers/{$impresoraB->id}/jobs", [
-            'format' => 'html', 'data' => '<p>x</p>',
+        $this->postJson('/v1/agents/print', [
+            'agent_id' => $agenteB->id, 'target' => 'receipt', 'format' => 'html', 'data' => '<p>x</p>',
+        ], $headers)->assertNotFound();
+    }
+
+    public function test_rechaza_un_target_que_no_existe_en_el_agente(): void
+    {
+        [$empresa, $agente] = $this->empresaConAgenteYImpresora();
+        $headers = ['Authorization' => 'Bearer '.$empresa->createToken('t', ['tenant'])->plainTextToken];
+
+        $this->postJson('/v1/agents/print', [
+            'agent_id' => $agente->id, 'target' => 'impresora-inexistente', 'format' => 'html', 'data' => '<p>x</p>',
         ], $headers)->assertNotFound();
     }
 
     public function test_rechaza_un_formato_no_soportado(): void
     {
-        [$empresa, $agente, $impresora] = $this->empresaConAgenteYImpresora();
+        [$empresa, $agente] = $this->empresaConAgenteYImpresora();
         $headers = ['Authorization' => 'Bearer '.$empresa->createToken('t', ['tenant'])->plainTextToken];
 
-        $this->postJson("/v1/agents/{$agente->id}/printers/{$impresora->id}/jobs", [
-            'format' => 'pdf', 'data' => 'x',
+        $this->postJson('/v1/agents/print', [
+            'agent_id' => $agente->id, 'target' => 'receipt', 'format' => 'pdf', 'data' => 'x',
         ], $headers)->assertStatus(422);
     }
 }

@@ -397,31 +397,35 @@ print from somewhere that **can't** reach the register's local network at
 all — a backend job, a webhook from a payment processor, a scheduled task —
 using your platform API key instead of the register's local token.
 
-It accepts the exact same `format`/`data` shapes as the local channel
-(`html`, `raw`, `escpos`, `tspl` — see
+It accepts almost the exact same body as a local print job — `target`
+(the printer's alias, not a numeric ID) plus the same `format`/`data`
+shapes (`html`, `raw`, `escpos`, `tspl` — see
 [Printing Examples](./printing-examples.md#the-three-ways-to-print) for the
-full shape of each), so if you already have working local integration code,
-you're reusing the same payload, just posted somewhere else with a
-different token.
+full shape of each) — with one addition: `agent_id`, since unlike the local
+channel (which only ever talks to the one agent it's running next to) this
+needs to know *which* agent to deliver to.
 
 ```
-POST /v1/agents/{agent_id}/printers/{printer_id}/jobs
+POST /v1/agents/print
 ```
 
-You'll need the agent's and printer's numeric IDs — click either ID badge
-in the [Agents dashboard](https://impryxa.vekronis.com/#/agentes) (inside
-an agent card's expanded detail) to copy it, or read them from
-`GET /v1/agents` / `GET /v1/agents/{id}/printers`.
+You'll need the agent's numeric ID — click its ID badge in the
+[Agents dashboard](https://impryxa.vekronis.com/#/agentes) (inside that
+agent's card, expanded detail) to copy it, or read it from
+`GET /v1/agents`. The printer is identified by `target`, same alias you
+already use locally — no separate printer ID needed.
 
 ```js
 // JavaScript (fetch) -- HTML receipt
-await fetch(`https://impryxa.vekronis.com/v1/agents/${agentId}/printers/${printerId}/jobs`, {
+await fetch('https://impryxa.vekronis.com/v1/agents/print', {
   method: 'POST',
   headers: {
     Authorization: `Bearer ${API_KEY}`,
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
+    agent_id: agentId,
+    target: 'receipt',
     format: 'html',
     data: { html: '<h1>Parque Aventura</h1><p>Entrada general x2 — $45.000</p>', ancho_px: 576 },
     external_job_id: `order-${orderId}`, // opcional -- la tuya, para correlacionar y para reintentos seguros
@@ -431,12 +435,14 @@ await fetch(`https://impryxa.vekronis.com/v1/agents/${agentId}/printers/${printe
 
 ```php
 // PHP (curl) -- raw bytes, base64 igual que el canal local
-$ch = curl_init("https://impryxa.vekronis.com/v1/agents/{$agentId}/printers/{$printerId}/jobs");
+$ch = curl_init('https://impryxa.vekronis.com/v1/agents/print');
 curl_setopt_array($ch, [
     CURLOPT_POST => true,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HTTPHEADER => ["Authorization: Bearer $apiKey", "Content-Type: application/json"],
     CURLOPT_POSTFIELDS => json_encode([
+        'agent_id' => $agentId,
+        'target' => 'receipt',
         'format' => 'raw',
         'data' => base64_encode("PARQUE AVENTURA\nEntrada general x2   \$45.000\n\n\n"),
         'external_job_id' => "order-{$orderId}",
@@ -447,9 +453,9 @@ $respuesta = json_decode(curl_exec($ch), true);
 ```
 
 ```
-curl -X POST https://impryxa.vekronis.com/v1/agents/42/printers/7/jobs \
+curl -X POST https://impryxa.vekronis.com/v1/agents/print \
   -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" \
-  -d '{"format":"escpos","data":{"negocio":"Parque Aventura","items":[{"nombre":"Entrada general","cantidad":2,"precio":45000}],"total":90000}}'
+  -d '{"agent_id":42,"target":"receipt","format":"escpos","data":{"negocio":"Parque Aventura","items":[{"nombre":"Entrada general","cantidad":2,"precio":45000}],"total":90000}}'
 ```
 
 A few things that matter about this endpoint specifically:

@@ -40,7 +40,7 @@ pre-filled, ready to copy.
 |---|---|---|
 | GET | `/v1/agents` | Lists your company's agents and their status |
 | GET | `/v1/agents/{id}/printers` | Printers registered on an agent |
-| POST | `/v1/agents/{agentId}/printers/{printerId}/jobs` | Send a print job remotely — `html`, `raw`, `escpos`, or `tspl` (picked up on the agent's next heartbeat, up to 30s — see [Send a print job remotely](./pos-integration.md#send-a-print-job-remotely)) |
+| POST | `/v1/agents/print` | Send a print job remotely — `html`, `raw`, `escpos`, or `tspl` (picked up on the agent's next heartbeat, up to 30s — see [Send a print job remotely](./pos-integration.md#send-a-print-job-remotely)) |
 | GET | `/v1/jobs` | Print jobs (filters: `agent_id`, `printer_id`, `status`, `from`, `to`) |
 | GET | `/v1/stats/summary` | Success rate, uptime, volume, errors |
 | GET | `/v1/webhooks` | Your configured webhooks |

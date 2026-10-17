@@ -49,7 +49,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'empresa.activa'])->group(funct
     Route::get('/agents/{id}/printers', [AgenteController::class, 'impresoras']);
     Route::delete('/agents/{id}', [AgenteController::class, 'destroy']);
     Route::post('/agents/{agenteId}/printers/{impresoraId}/test-print', [PruebaImpresionController::class, 'store']);
-    Route::post('/agents/{agenteId}/printers/{impresoraId}/jobs', [TrabajoController::class, 'store']);
+    Route::post('/agents/print', [TrabajoController::class, 'store']);
 
     Route::get('/jobs', [TrabajoController::class, 'index']);
     Route::get('/jobs/{id}', [TrabajoController::class, 'show']);

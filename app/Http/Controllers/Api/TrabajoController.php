@@ -74,16 +74,21 @@ class TrabajoController extends Controller
      *
      * Accepts the same `format`/`data` shapes as the local print API,
      * `html` and `raw` included -- see the Printing Examples guide for a
-     * full worked example of each in several languages.
+     * full worked example of each in several languages. `target` is the
+     * same printer alias the local channel uses, not a numeric ID -- the
+     * body here is deliberately almost identical to a local print job, so
+     * the only real difference when switching between them is the URL and
+     * which token you authenticate with.
      */
-    public function store(Request $request, int $agenteId, int $impresoraId)
+    public function store(Request $request)
     {
         $empresa = $request->user();
 
-        $agente = Agente::where('empresa_id', $empresa->id)->findOrFail($agenteId);
-        $impresora = Impresora::where('agente_id', $agente->id)->findOrFail($impresoraId);
-
         $datos = $request->validate([
+            /** The agent to print on. Find it in `GET /v1/agents`, or copy the ID badge on that agent's card in the dashboard. */
+            'agent_id' => ['required', 'integer'],
+            /** The printer's alias on that agent -- the same `target` a local print job sends, not a numeric ID. */
+            'target' => ['required', 'string'],
             /** `html`, `raw`, `escpos`, or `tspl`. `raw` must be base64-encoded -- see the "Common mistakes" note in the Printing Examples guide. */
             'format' => ['required', 'string', Rule::in(['html', 'raw', 'escpos', 'tspl'])],
             /** The content to print, shaped according to `format`: an HTML string (or `{html, width_px}`) for `html`, a base64 string for `raw`, or a structured object for `escpos`/`tspl`. */
@@ -91,6 +96,9 @@ class TrabajoController extends Controller
             /** Your own ID for this job, echoed back in `GET /v1/jobs` and in webhooks. Defaults to a generated UUID if omitted. Sending the same `external_job_id` again for this agent is treated as a retry of the same job, not a new print -- safe to do if you're not sure your first request made it through. */
             'external_job_id' => ['nullable', 'string', 'max:255'],
         ]);
+
+        $agente = Agente::where('empresa_id', $empresa->id)->findOrFail($datos['agent_id']);
+        $impresora = Impresora::where('agente_id', $agente->id)->where('alias', $datos['target'])->firstOrFail();
 
         if (! empty($datos['external_job_id'])) {
             $existente = ComandoPrueba::where('agente_id', $agente->id)->where('job_id_externo', $datos['external_job_id'])->first();
