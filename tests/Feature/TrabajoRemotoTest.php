@@ -7,6 +7,8 @@ use App\Models\ComandoPrueba;
 use App\Models\Empresa;
 use App\Models\Impresora;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class TrabajoRemotoTest extends TestCase
@@ -138,5 +140,64 @@ class TrabajoRemotoTest extends TestCase
         $this->postJson('/v1/agents/print', [
             'agent_id' => $agente->id, 'target' => 'receipt', 'format' => 'pdf', 'data' => 'x',
         ], $headers)->assertStatus(422);
+    }
+
+    public function test_recorrido_completo_hasta_el_webhook_y_las_estadisticas(): void
+    {
+        // Valida la cadena entera para un trabajo creado por este endpoint
+        // (no uno local): /v1/agents/print encola el comando -> el agente
+        // lo recibe en su heartbeat -> lo "imprime" y reporta el resultado
+        // por /agent/events -> eso actualiza trabajos_impresion, dispara el
+        // webhook suscrito, y queda disponible para app:calcular-estadisticas.
+        // Ningun paso de este pipeline es nuevo (ya existia para jobs
+        // locales y para test-print) -- esto confirma que el endpoint nuevo
+        // efectivamente entra por la misma puerta y no por un atajo aparte.
+        Http::fake(['ejemplo.com/*' => Http::response(['ok' => true], 200)]);
+
+        $empresa = Empresa::create(['nombre' => 'Demo', 'codigo' => 'demo', 'plan' => 'piloto', 'activo' => true]);
+        $agente = Agente::create(['empresa_id' => $empresa->id, 'instalacion_id' => 'pos-rt', 'token_hash' => hash('sha256', 'plaintoken'), 'estado' => 'online', 'creado_en' => now()]);
+        $impresora = Impresora::create(['agente_id' => $agente->id, 'alias' => 'receipt', 'tipo' => 'red', 'estado_heartbeat' => 'online', 'actualizado_en' => now()]);
+
+        $token = $empresa->createToken('t', ['tenant'])->plainTextToken;
+        $headers = ['Authorization' => "Bearer {$token}"];
+
+        $webhook = $this->postJson('/v1/webhooks', [
+            'url' => 'https://ejemplo.com/hook',
+            'subscribed_events' => ['job.printed'],
+        ], $headers)->json();
+
+        // 1. Se encola el trabajo remoto.
+        $this->postJson('/v1/agents/print', [
+            'agent_id' => $agente->id, 'target' => 'receipt', 'format' => 'html',
+            'data' => '<p>Recibo</p>', 'external_job_id' => 'order-rt-1',
+        ], $headers)->assertStatus(202);
+
+        // 2. El agente lo recibe en su proximo heartbeat.
+        $heartbeat = $this->postJson('/agent/heartbeat', [], ['Authorization' => 'Bearer plaintoken'])->assertOk();
+        $heartbeat->assertJsonCount(1, 'pending_commands')
+            ->assertJsonPath('pending_commands.0.id', 'order-rt-1')
+            ->assertJsonPath('pending_commands.0.target', 'receipt');
+
+        // 3. El agente lo imprime y reporta el resultado -- mismo evento que
+        // mandaria para un job local, el agente no distingue el origen.
+        $this->postJson('/agent/events', [
+            'event_type' => 'job.printed', 'external_job_id' => 'order-rt-1', 'target' => 'receipt',
+        ], ['Authorization' => 'Bearer plaintoken'])->assertStatus(202);
+
+        $this->assertDatabaseHas('trabajos_impresion', [
+            'agente_id' => $agente->id, 'job_id_externo' => 'order-rt-1', 'impresora_id' => $impresora->id, 'estado' => 'impreso',
+        ]);
+
+        Http::assertSent(fn ($request) => $request->url() === 'https://ejemplo.com/hook'
+            && json_decode($request->body(), true)['job_id'] !== null);
+
+        $entregas = $this->getJson("/v1/webhooks/{$webhook['data']['id']}/deliveries", $headers)->json('data');
+        $this->assertTrue($entregas[0]['successful']);
+
+        // 4. Entra en las estadisticas igual que cualquier otro trabajo.
+        Artisan::call('app:calcular-estadisticas');
+        $stats = $this->getJson('/v1/stats/summary', $headers)->assertOk()->json();
+        $porImpresora = collect($stats['success_rate_by_printer'])->firstWhere('printer_id', $impresora->id);
+        $this->assertSame(1, $porImpresora['printed']);
     }
 }
