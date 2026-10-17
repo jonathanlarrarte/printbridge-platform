@@ -15,6 +15,11 @@ Every example here talks to the **local agent** on the register
 platform API (`/v1/*`). See [POS Multi-Branch Integration](./pos-integration.md#1-architecture-of-the-full-flow)
 for why that split exists. This matters for the Laravel example below —
 read the note there before copying it as-is.
+
+Need to trigger a print from somewhere that *can't* reach the register's
+local network at all (a backend job, a payment webhook)? There's a remote
+equivalent that takes the same `format`/`data` shapes you'll see below —
+see [Send a print job remotely](./pos-integration.md#send-a-print-job-remotely).
 :::
 
 ## What's a "job"?

@@ -388,6 +388,84 @@ foreach (var a in resp.Data)
     Console.WriteLine($"{a.DisplayName}: {a.Status}");
 ```
 
+### Send a print job remotely
+
+Everything in [§3](#3-local-integration-pos--agent) talks straight to the
+agent on the register's own machine — fast, but only reachable from code
+running *on* that register. This endpoint is the opposite case: trigger a
+print from somewhere that **can't** reach the register's local network at
+all — a backend job, a webhook from a payment processor, a scheduled task —
+using your platform API key instead of the register's local token.
+
+It accepts the exact same `format`/`data` shapes as the local channel
+(`html`, `raw`, `escpos`, `tspl` — see
+[Printing Examples](./printing-examples.md#the-three-ways-to-print) for the
+full shape of each), so if you already have working local integration code,
+you're reusing the same payload, just posted somewhere else with a
+different token.
+
+```
+POST /v1/agents/{agent_id}/printers/{printer_id}/jobs
+```
+
+You'll need the agent's and printer's numeric IDs — click either ID badge
+in the [Agents dashboard](https://impryxa.vekronis.com/#/agentes) (inside
+an agent card's expanded detail) to copy it, or read them from
+`GET /v1/agents` / `GET /v1/agents/{id}/printers`.
+
+```js
+// JavaScript (fetch) -- HTML receipt
+await fetch(`https://impryxa.vekronis.com/v1/agents/${agentId}/printers/${printerId}/jobs`, {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    format: 'html',
+    data: { html: '<h1>Parque Aventura</h1><p>Entrada general x2 — $45.000</p>', ancho_px: 576 },
+    external_job_id: `order-${orderId}`, // opcional -- la tuya, para correlacionar y para reintentos seguros
+  }),
+});
+```
+
+```php
+// PHP (curl) -- raw bytes, base64 igual que el canal local
+$ch = curl_init("https://impryxa.vekronis.com/v1/agents/{$agentId}/printers/{$printerId}/jobs");
+curl_setopt_array($ch, [
+    CURLOPT_POST => true,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER => ["Authorization: Bearer $apiKey", "Content-Type: application/json"],
+    CURLOPT_POSTFIELDS => json_encode([
+        'format' => 'raw',
+        'data' => base64_encode("PARQUE AVENTURA\nEntrada general x2   \$45.000\n\n\n"),
+        'external_job_id' => "order-{$orderId}",
+    ]),
+]);
+$respuesta = json_decode(curl_exec($ch), true);
+// ['data' => ['external_job_id' => 'order-123', 'message' => 'Queued. The agent will print it on its next heartbeat (up to 30s).']]
+```
+
+```
+curl -X POST https://impryxa.vekronis.com/v1/agents/42/printers/7/jobs \
+  -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" \
+  -d '{"format":"escpos","data":{"negocio":"Parque Aventura","items":[{"nombre":"Entrada general","cantidad":2,"precio":45000}],"total":90000}}'
+```
+
+A few things that matter about this endpoint specifically:
+
+- **It's not instant.** The agent only picks it up on its next heartbeat
+  (every 15-30s) — same latency as a test print from the dashboard. If your
+  POS can reach the register directly, [§3](#3-local-integration-pos--agent)
+  is faster and doesn't depend on this platform being reachable.
+- **`external_job_id` makes retries safe.** Send the same value again (same
+  agent) and you get back the original job's ID with HTTP 200 instead of a
+  second print — safe to retry blindly on a timeout. Omit it and you get a
+  generated UUID back each time (and each call is a genuinely new job).
+- **Track the outcome** the same way as any job: poll
+  `GET /v1/jobs?agent_id=...` or subscribe to the `job.printed`/`job.failed`
+  [webhooks](#automatic-alerts-webhooks--eg-notify-when-a-register-goes-down).
+
 ### Aggregated stats for the whole chain
 
 ```

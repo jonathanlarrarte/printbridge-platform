@@ -4,10 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TrabajoResource;
+use App\Models\Agente;
+use App\Models\ComandoPrueba;
+use App\Models\Impresora;
 use App\Models\TrabajoImpresion;
 use App\Support\JobStatus;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 #[Group('Jobs')]
@@ -55,5 +59,64 @@ class TrabajoController extends Controller
         $trabajo = TrabajoImpresion::whereHas('agente')->with(['agente', 'eventos'])->findOrFail($id);
 
         return new TrabajoResource($trabajo);
+    }
+
+    /**
+     * Send a print job.
+     *
+     * This goes through the agent's heartbeat (picked up within 15-30s), not
+     * straight to the printer -- it's the channel for triggering a print
+     * from somewhere that can't reach the POS's local network at all, like
+     * a backend job or a webhook from a payment processor. If your code
+     * runs *on* the POS itself, use the local print API instead (see the
+     * POS Integration guide) -- it's instant and doesn't depend on this
+     * platform being reachable.
+     *
+     * Accepts the same `format`/`data` shapes as the local print API,
+     * `html` and `raw` included -- see the Printing Examples guide for a
+     * full worked example of each in several languages.
+     */
+    public function store(Request $request, int $agenteId, int $impresoraId)
+    {
+        $empresa = $request->user();
+
+        $agente = Agente::where('empresa_id', $empresa->id)->findOrFail($agenteId);
+        $impresora = Impresora::where('agente_id', $agente->id)->findOrFail($impresoraId);
+
+        $datos = $request->validate([
+            /** `html`, `raw`, `escpos`, or `tspl`. `raw` must be base64-encoded -- see the "Common mistakes" note in the Printing Examples guide. */
+            'format' => ['required', 'string', Rule::in(['html', 'raw', 'escpos', 'tspl'])],
+            /** The content to print, shaped according to `format`: an HTML string (or `{html, width_px}`) for `html`, a base64 string for `raw`, or a structured object for `escpos`/`tspl`. */
+            'data' => ['required'],
+            /** Your own ID for this job, echoed back in `GET /v1/jobs` and in webhooks. Defaults to a generated UUID if omitted. Sending the same `external_job_id` again for this agent is treated as a retry of the same job, not a new print -- safe to do if you're not sure your first request made it through. */
+            'external_job_id' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        if (! empty($datos['external_job_id'])) {
+            $existente = ComandoPrueba::where('agente_id', $agente->id)->where('job_id_externo', $datos['external_job_id'])->first();
+            if ($existente) {
+                return response()->json(['data' => [
+                    'external_job_id' => $existente->job_id_externo,
+                    'message' => 'Already queued -- this external_job_id was already sent for this agent.',
+                ]], 200);
+            }
+        }
+
+        $comando = ComandoPrueba::create([
+            'agente_id' => $agente->id,
+            'impresora_id' => $impresora->id,
+            'job_id_externo' => $datos['external_job_id'] ?? (string) Str::uuid(),
+            'target' => $impresora->alias,
+            'format' => $datos['format'],
+            'data' => $datos['data'],
+            'estado' => 'pendiente',
+            'creado_en' => now(),
+        ]);
+
+        return response()->json(['data' => [
+            /** Same ID you sent, or the generated one if you didn't send one -- poll `GET /v1/jobs?agent_id=...` or subscribe to `job.printed`/`job.failed` webhooks to see the outcome. */
+            'external_job_id' => $comando->job_id_externo,
+            'message' => 'Queued. The agent will print it on its next heartbeat (up to 30s).',
+        ]], 202);
     }
 }
