@@ -78,8 +78,8 @@ export const api = {
   agente: (id) => llamar(`/v1/agents/${id}`),
   renombrarAgente: (id, display_name) => llamar(`/v1/agents/${id}`, { method: 'PATCH', body: { display_name } }),
   borrarAgente: (id) => llamar(`/v1/agents/${id}`, { method: 'DELETE' }),
-  enviarPruebaImpresion: (agenteId, impresoraId) =>
-    llamar(`/v1/agents/${agenteId}/printers/${impresoraId}/test-print`, { method: 'POST' }),
+  enviarPruebaImpresion: (agenteId, target) =>
+    llamar('/v1/agents/test-print', { method: 'POST', body: { agent_id: agenteId, target } }),
 
   trabajos: (filtros = {}) => {
     const qs = new URLSearchParams(Object.entries(filtros).filter(([, v]) => v)).toString();

@@ -133,10 +133,10 @@ function badgeUltimoTrabajo(ultimoTrabajo) {
   return { texto: ultimoTrabajo.status, clase: 'bg-amber-100 text-amber-700' };
 }
 
-async function enviarPrueba(agenteId, impresoraId) {
+async function enviarPrueba(agenteId, impresoraId, alias) {
   estadoPrueba[impresoraId] = 'enviando';
   try {
-    await api.enviarPruebaImpresion(agenteId, impresoraId);
+    await api.enviarPruebaImpresion(agenteId, alias);
     estadoPrueba[impresoraId] = 'enviado';
     setTimeout(() => cargar(), 20000); // el agente la recoge en su proximo heartbeat (hasta 30s)
   } catch {
@@ -366,7 +366,7 @@ async function confirmarEliminacion() {
                       <button
                         class="text-xs font-medium text-slate-600 hover:text-slate-900 disabled:opacity-50"
                         :disabled="estadoPrueba[imp.id] === 'enviando'"
-                        @click="enviarPrueba(agente.id, imp.id)"
+                        @click="enviarPrueba(agente.id, imp.id, imp.alias)"
                       >
                         {{ { enviando: 'Enviando…', enviado: 'Enviada ✓', error: 'Error, reintentar' }[estadoPrueba[imp.id]] || 'Enviar prueba' }}
                       </button>

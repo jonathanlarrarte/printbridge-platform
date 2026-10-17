@@ -99,7 +99,7 @@ class TrabajoController extends Controller
             'target' => ['required', 'string'],
             /** `html`, `raw`, `escpos`, or `tspl`. `raw` must be base64-encoded -- see the "Common mistakes" note in the Printing Examples guide. */
             'format' => ['required', 'string', Rule::in(['html', 'raw', 'escpos', 'tspl'])],
-            /** The content to print, shaped according to `format`: an HTML string (or `{html, width_px}`) for `html`, a base64 string for `raw`, or a structured object for `escpos`/`tspl`. */
+            /** The content to print, shaped according to `format`: an HTML string (or `{html, ancho_px}`) for `html`, a base64 string for `raw`, or a structured object for `escpos`/`tspl`. `ancho_px` defaults to 576 (80mm thermal at 203dpi) if omitted. */
             'data' => ['required'],
             /** Your own ID for this job, echoed back in `GET /v1/jobs` and in webhooks. Defaults to a generated UUID if omitted. Sending the same `external_job_id` again for this agent is treated as a retry of the same job, not a new print -- safe to do if you're not sure your first request made it through. */
             'external_job_id' => ['nullable', 'string', 'max:255'],

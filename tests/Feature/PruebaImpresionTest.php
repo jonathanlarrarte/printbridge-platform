@@ -21,7 +21,7 @@ class PruebaImpresionTest extends TestCase
 
         $headers = ['Authorization' => 'Bearer '.$empresa->createToken('t', ['tenant'])->plainTextToken];
 
-        $respuesta = $this->postJson("/v1/agents/{$agente->id}/printers/{$impresora->id}/test-print", [], $headers);
+        $respuesta = $this->postJson('/v1/agents/test-print', ['agent_id' => $agente->id, 'target' => 'receipt'], $headers);
 
         $respuesta->assertStatus(202)->assertJsonStructure(['data' => ['external_job_id', 'message']]);
         $this->assertDatabaseHas('comandos_prueba', [
@@ -36,7 +36,7 @@ class PruebaImpresionTest extends TestCase
         $impresora = Impresora::create(['agente_id' => $agente->id, 'alias' => 'wristband', 'tipo' => 'usb', 'protocolo' => 'tspl', 'estado_heartbeat' => 'online', 'actualizado_en' => now()]);
 
         $headers = ['Authorization' => 'Bearer '.$empresa->createToken('t', ['tenant'])->plainTextToken];
-        $this->postJson("/v1/agents/{$agente->id}/printers/{$impresora->id}/test-print", [], $headers)->assertStatus(202);
+        $this->postJson('/v1/agents/test-print', ['agent_id' => $agente->id, 'target' => 'wristband'], $headers)->assertStatus(202);
 
         $this->assertDatabaseHas('comandos_prueba', ['impresora_id' => $impresora->id, 'format' => 'tspl']);
     }
@@ -46,11 +46,27 @@ class PruebaImpresionTest extends TestCase
         $empresaA = Empresa::create(['nombre' => 'A', 'codigo' => 'a', 'plan' => 'piloto', 'activo' => true]);
         $empresaB = Empresa::create(['nombre' => 'B', 'codigo' => 'b', 'plan' => 'piloto', 'activo' => true]);
         $agenteB = Agente::create(['empresa_id' => $empresaB->id, 'instalacion_id' => 'pos-b', 'token_hash' => 'x', 'estado' => 'online', 'creado_en' => now()]);
-        $impresoraB = Impresora::create(['agente_id' => $agenteB->id, 'alias' => 'receipt', 'tipo' => 'red', 'estado_heartbeat' => 'online', 'actualizado_en' => now()]);
+        Impresora::create(['agente_id' => $agenteB->id, 'alias' => 'receipt', 'tipo' => 'red', 'estado_heartbeat' => 'online', 'actualizado_en' => now()]);
 
         $headers = ['Authorization' => 'Bearer '.$empresaA->createToken('t', ['tenant'])->plainTextToken];
 
-        $this->postJson("/v1/agents/{$agenteB->id}/printers/{$impresoraB->id}/test-print", [], $headers)->assertNotFound();
+        $this->postJson('/v1/agents/test-print', ['agent_id' => $agenteB->id, 'target' => 'receipt'], $headers)->assertNotFound();
+    }
+
+    public function test_un_id_de_agente_no_numerico_da_404_limpio_no_500(): void
+    {
+        // Regresion: {agenteId}/{impresoraId} estaban tipados `int` en el
+        // controlador sin ninguna restriccion en la ruta -- un valor no
+        // numerico (ej. pegar el installation_id o un alias donde va un
+        // ID) llegaba igual al controlador y PHP tiraba un TypeError sin
+        // capturar, devuelto como 500 opaco.
+        $empresa = Empresa::create(['nombre' => 'Demo', 'codigo' => 'demo', 'plan' => 'piloto', 'activo' => true]);
+        $headers = ['Authorization' => 'Bearer '.$empresa->createToken('t', ['tenant'])->plainTextToken];
+
+        $this->postJson('/v1/agents/test-print', ['agent_id' => 'pos-desktop-o6gu6jt-dc8d9e41', 'target' => 'receipt'], $headers)
+            ->assertStatus(422);
+
+        $this->getJson('/v1/agents/no-es-un-numero', $headers)->assertStatus(404);
     }
 
     public function test_el_heartbeat_entrega_el_comando_pendiente_y_lo_marca_entregado(): void

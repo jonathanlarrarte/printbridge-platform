@@ -20,12 +20,19 @@ class PruebaImpresionController extends Controller
      * queues it locally exactly like a real POS print job, so it goes
      * through the same retries and status reporting.
      */
-    public function store(Request $request, int $agenteId, int $impresoraId)
+    public function store(Request $request)
     {
         $empresa = $request->user();
 
-        $agente = Agente::where('empresa_id', $empresa->id)->findOrFail($agenteId);
-        $impresora = Impresora::where('agente_id', $agente->id)->findOrFail($impresoraId);
+        $datos = $request->validate([
+            /** The agent whose printer you want to test. Find it in `GET /v1/agents`, or copy the ID badge on that agent's card in the dashboard. */
+            'agent_id' => ['required', 'integer'],
+            /** The printer's alias on that agent -- not a numeric ID. */
+            'target' => ['required', 'string'],
+        ]);
+
+        $agente = Agente::where('empresa_id', $empresa->id)->findOrFail($datos['agent_id']);
+        $impresora = Impresora::where('agente_id', $agente->id)->where('alias', $datos['target'])->firstOrFail();
 
         $comando = $this->crearComando($agente, $impresora);
 

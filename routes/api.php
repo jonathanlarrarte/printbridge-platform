@@ -19,6 +19,17 @@ use Illuminate\Support\Facades\Route;
 // facing), while everything internal (controllers, models, DB columns)
 // stays in Spanish -- deliberate boundary, see app/Support/JobStatus.php.
 
+// Todo ID en esta API es numerico. Sin esto, un valor no numerico (ej. un
+// installation_id o un alias pegado por error donde va un ID) hace que el
+// router igual invoque el controlador, cuyo parametro esta tipado `int` --
+// PHP tira un TypeError no capturado y el cliente recibe un 500 opaco en
+// vez de un 404 limpio. Patron global (no por ruta) porque estos 4 nombres
+// se repiten en decenas de rutas de todo el archivo.
+Route::pattern('id', '[0-9]+');
+Route::pattern('agenteId', '[0-9]+');
+Route::pattern('impresoraId', '[0-9]+');
+Route::pattern('empresaId', '[0-9]+');
+
 // Healthcheck publico (seccion 11 del doc de arquitectura).
 Route::get('/health', fn () => response()->json(['ok' => true]));
 
@@ -49,7 +60,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'empresa.activa'])->group(funct
     Route::get('/agents/{id}/printers', [AgenteController::class, 'impresoras']);
     Route::patch('/agents/{id}', [AgenteController::class, 'update']);
     Route::delete('/agents/{id}', [AgenteController::class, 'destroy']);
-    Route::post('/agents/{agenteId}/printers/{impresoraId}/test-print', [PruebaImpresionController::class, 'store']);
+    Route::post('/agents/test-print', [PruebaImpresionController::class, 'store']);
     Route::post('/agents/print', [TrabajoController::class, 'store']);
 
     Route::get('/jobs', [TrabajoController::class, 'index']);
