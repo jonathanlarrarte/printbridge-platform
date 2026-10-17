@@ -59,6 +59,29 @@ class AgenteController extends Controller
     }
 
     /**
+     * Rename an agent.
+     *
+     * Sets a nickname shown instead of the machine hostname everywhere in
+     * the dashboard and API (`display_name`) -- purely cosmetic, doesn't
+     * affect routing, the local token, or anything the agent itself does.
+     * Send `null` to go back to showing the machine hostname the agent
+     * reported at registration.
+     */
+    public function update(Request $request, int $id)
+    {
+        $agente = Agente::findOrFail($id);
+
+        $datos = $request->validate([
+            /** The nickname to show for this agent. Null clears it, falling back to the hostname the agent itself reported. */
+            'display_name' => ['present', 'nullable', 'string', 'max:255'],
+        ]);
+
+        $agente->update(['nombre_descriptivo' => $datos['display_name']]);
+
+        return new AgenteResource($agente->load('impresoras.ultimoTrabajo'));
+    }
+
+    /**
      * Delete an agent.
      *
      * This is permanent and cascades: every printer, job, event, and

@@ -107,6 +107,72 @@ class ApiPublicaTest extends TestCase
             ->assertJsonCount(20, 'data');
     }
 
+    public function test_v1_jobs_pagina_de_a_25_por_defecto(): void
+    {
+        $empresa = Empresa::create(['nombre' => 'A', 'codigo' => 'a', 'plan' => 'piloto', 'activo' => true]);
+        $agente = Agente::create(['empresa_id' => $empresa->id, 'instalacion_id' => 'pos-a', 'token_hash' => 'x', 'estado' => 'online', 'creado_en' => now()]);
+        for ($i = 0; $i < 30; $i++) {
+            TrabajoImpresion::create(['agente_id' => $agente->id, 'job_id_externo' => "j{$i}", 'target' => 'receipt', 'estado' => 'impreso']);
+        }
+
+        $token = $empresa->createToken('t')->plainTextToken;
+
+        $respuesta = $this->getJson('/v1/jobs', ['Authorization' => "Bearer {$token}"])->assertOk();
+        $respuesta->assertJsonCount(25, 'data')
+            ->assertJsonPath('meta.total', 30)
+            ->assertJsonPath('meta.last_page', 2);
+
+        $this->getJson('/v1/jobs?page=2', ['Authorization' => "Bearer {$token}"])
+            ->assertOk()
+            ->assertJsonCount(5, 'data');
+    }
+
+    public function test_v1_jobs_per_page_respeta_el_tope_de_100(): void
+    {
+        $empresa = Empresa::create(['nombre' => 'A', 'codigo' => 'a', 'plan' => 'piloto', 'activo' => true]);
+        $agente = Agente::create(['empresa_id' => $empresa->id, 'instalacion_id' => 'pos-a', 'token_hash' => 'x', 'estado' => 'online', 'creado_en' => now()]);
+        for ($i = 0; $i < 10; $i++) {
+            TrabajoImpresion::create(['agente_id' => $agente->id, 'job_id_externo' => "j{$i}", 'target' => 'receipt', 'estado' => 'impreso']);
+        }
+
+        $token = $empresa->createToken('t')->plainTextToken;
+
+        $this->getJson('/v1/jobs?per_page=500', ['Authorization' => "Bearer {$token}"])
+            ->assertOk()
+            ->assertJsonPath('meta.per_page', 100);
+    }
+
+    public function test_renombrar_agente(): void
+    {
+        $empresa = Empresa::create(['nombre' => 'A', 'codigo' => 'a', 'plan' => 'piloto', 'activo' => true]);
+        $agente = Agente::create(['empresa_id' => $empresa->id, 'instalacion_id' => 'pos-a', 'token_hash' => 'x', 'estado' => 'online', 'creado_en' => now()]);
+        $token = $empresa->createToken('t')->plainTextToken;
+
+        $this->patchJson("/v1/agents/{$agente->id}", ['display_name' => 'Caja 3'], ['Authorization' => "Bearer {$token}"])
+            ->assertOk()
+            ->assertJsonPath('data.display_name', 'Caja 3');
+
+        $this->assertDatabaseHas('agentes', ['id' => $agente->id, 'nombre_descriptivo' => 'Caja 3']);
+
+        // Mandar null limpia el apodo -- vuelve a mostrar el hostname.
+        $this->patchJson("/v1/agents/{$agente->id}", ['display_name' => null], ['Authorization' => "Bearer {$token}"])
+            ->assertOk()
+            ->assertJsonPath('data.display_name', null);
+    }
+
+    public function test_no_se_puede_renombrar_un_agente_de_otra_empresa(): void
+    {
+        $empresaA = Empresa::create(['nombre' => 'A', 'codigo' => 'a', 'plan' => 'piloto', 'activo' => true]);
+        $empresaB = Empresa::create(['nombre' => 'B', 'codigo' => 'b', 'plan' => 'piloto', 'activo' => true]);
+        $agenteB = Agente::create(['empresa_id' => $empresaB->id, 'instalacion_id' => 'pos-b', 'token_hash' => 'x', 'estado' => 'online', 'creado_en' => now()]);
+        $tokenA = $empresaA->createToken('t')->plainTextToken;
+
+        $this->patchJson("/v1/agents/{$agenteB->id}", ['display_name' => 'Caja 1'], ['Authorization' => "Bearer {$tokenA}"])
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing('agentes', ['id' => $agenteB->id, 'nombre_descriptivo' => 'Caja 1']);
+    }
+
     public function test_borrar_agente_libera_su_installation_id_para_otra_empresa(): void
     {
         $empresaA = Empresa::create(['nombre' => 'A', 'codigo' => 'a', 'plan' => 'piloto', 'activo' => true]);

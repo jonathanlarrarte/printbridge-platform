@@ -10,6 +10,11 @@ const error = ref('');
 const filtroEstado = ref('');
 const filtroAgente = ref('');
 
+// Esto es un log que crece sin limite (a diferencia de Agentes, que es una
+// flota acotada) -- paginacion real, no "traer todo con un limite grande".
+const pagina = ref(1);
+const meta = reactive({ current_page: 1, last_page: 1, total: 0, per_page: 25 });
+
 // El id de una prueba de impresion no le sirve a nadie a simple vista --
 // queda oculto por fila hasta que se pide verlo con el ojito, en vez de
 // sacar toda la fila de la lista.
@@ -23,8 +28,10 @@ async function cargar() {
     const respuesta = await api.trabajos({
       status: filtroEstado.value || undefined,
       agent_id: filtroAgente.value || undefined,
+      page: pagina.value,
     });
     trabajos.value = respuesta.data;
+    Object.assign(meta, respuesta.meta);
     error.value = '';
   } catch {
     error.value = 'No se pudieron cargar los trabajos.';
@@ -41,8 +48,19 @@ onMounted(async () => {
     // el filtro por agente simplemente no aparece si esto falla
   }
 });
-watch([filtroEstado, filtroAgente], cargar);
+// Cambiar un filtro vuelve siempre a la pagina 1 -- la pagina 3 de un
+// filtro anterior probablemente no exista para el nuevo.
+watch([filtroEstado, filtroAgente], () => {
+  pagina.value = 1;
+  cargar();
+});
+watch(pagina, cargar);
 useAutoRefresh(cargar, 20000);
+
+function irAPagina(n) {
+  if (n < 1 || n > meta.last_page) return;
+  pagina.value = n;
+}
 
 function badge(estado) {
   return {
@@ -110,5 +128,28 @@ function badge(estado) {
         </tr>
       </tbody>
     </table>
+
+    <div v-if="!cargando && trabajos.length" class="mt-4 flex items-center justify-between text-sm text-slate-500">
+      <p>Mostrando {{ meta.from }}–{{ meta.to }} de {{ meta.total }}</p>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="rounded-md border border-slate-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-40"
+          :disabled="meta.current_page <= 1"
+          @click="irAPagina(meta.current_page - 1)"
+        >
+          Anterior
+        </button>
+        <span>Página {{ meta.current_page }} de {{ meta.last_page }}</span>
+        <button
+          type="button"
+          class="rounded-md border border-slate-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-40"
+          :disabled="meta.current_page >= meta.last_page"
+          @click="irAPagina(meta.current_page + 1)"
+        >
+          Siguiente
+        </button>
+      </div>
+    </div>
   </div>
 </template>

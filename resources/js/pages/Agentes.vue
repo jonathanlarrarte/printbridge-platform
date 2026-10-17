@@ -32,6 +32,46 @@ async function copiarId(valor) {
   }
 }
 
+// Apodo editable por agente -- aparte del hostname que el propio agente
+// reporta, para identificar mas rapido ("Caja 3" en vez de "DESKTOP-O6GU6JT").
+const editandoNombre = ref(null); // id del agente en edicion, o null
+const borradorNombre = ref('');
+const guardandoNombre = ref(false);
+
+function iniciarEdicionNombre(agente) {
+  editandoNombre.value = agente.id;
+  borradorNombre.value = agente.display_name || '';
+}
+
+function cancelarEdicionNombre() {
+  editandoNombre.value = null;
+}
+
+async function guardarNombre(agente) {
+  // Si ya se cancelo (Escape), un blur que llega despues no debe revivir
+  // el guardado con lo que habia quedado tipeado.
+  if (editandoNombre.value !== agente.id) return;
+
+  const nuevo = borradorNombre.value.trim();
+  if (nuevo === (agente.display_name || '')) {
+    editandoNombre.value = null;
+    return;
+  }
+
+  guardandoNombre.value = true;
+  try {
+    const respuesta = await api.renombrarAgente(agente.id, nuevo || null);
+    agente.display_name = respuesta.data.display_name;
+    editandoNombre.value = null;
+  } catch {
+    // Se queda en modo edicion con el error visible, en vez de perder lo
+    // que el usuario ya escribio.
+    error.value = 'No se pudo guardar el nombre.';
+  } finally {
+    guardandoNombre.value = false;
+  }
+}
+
 async function cargar() {
   // Solo muestra "Cargando..." la primera vez -- los refrescos automaticos
   // de fondo no deberian hacer parpadear la lista que ya esta en pantalla.
@@ -204,8 +244,34 @@ async function confirmarEliminacion() {
 
           <div class="p-4 pt-5">
             <div class="mb-1 flex items-start justify-between gap-2">
-              <h2 class="truncate text-sm font-medium text-slate-900" :title="agente.display_name || agente.installation_id">
-                {{ agente.display_name || agente.installation_id }}
+              <div v-if="editandoNombre === agente.id" class="flex min-w-0 flex-1 items-center gap-1">
+                <input
+                  v-model="borradorNombre"
+                  type="text"
+                  autofocus
+                  :placeholder="agente.installation_id"
+                  class="min-w-0 flex-1 rounded-md border border-slate-300 px-1.5 py-0.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                  @keyup.enter="guardarNombre(agente)"
+                  @keyup.esc="cancelarEdicionNombre"
+                  @blur="guardarNombre(agente)"
+                />
+              </div>
+              <h2
+                v-else
+                class="group/nombre flex min-w-0 flex-1 items-center gap-1.5 truncate text-sm font-medium text-slate-900"
+                :title="agente.display_name || agente.installation_id"
+              >
+                <span class="truncate">{{ agente.display_name || agente.installation_id }}</span>
+                <button
+                  type="button"
+                  class="shrink-0 rounded p-0.5 text-slate-300 opacity-0 transition hover:bg-slate-100 hover:text-slate-600 group-hover:opacity-100"
+                  title="Ponerle un apodo"
+                  @click="iniciarEdicionNombre(agente)"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z" />
+                  </svg>
+                </button>
               </h2>
               <button
                 type="button"

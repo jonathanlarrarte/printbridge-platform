@@ -10,6 +10,7 @@ use App\Models\Impresora;
 use App\Models\TrabajoImpresion;
 use App\Support\JobStatus;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -20,8 +21,13 @@ class TrabajoController extends Controller
     /**
      * List print jobs.
      *
-     * Filterable by agent, printer, status, and date range.
+     * Filterable by agent, printer, status, and date range. This is a
+     * growing log, not a bounded list -- always paginated (see `meta` in
+     * the response: `current_page`, `last_page`, `total`), 25 per page by
+     * default.
      */
+    #[QueryParameter('page', description: 'Which page to return. Defaults to 1.', type: 'integer')]
+    #[QueryParameter('per_page', description: 'Results per page, up to 100. Defaults to 25.', type: 'integer')]
     public function index(Request $request)
     {
         $datos = $request->validate([
@@ -37,6 +43,8 @@ class TrabajoController extends Controller
             'to' => ['nullable', 'date'],
         ]);
 
+        $porPagina = min((int) $request->query('per_page', 25), 100);
+
         $query = TrabajoImpresion::whereHas('agente')
             ->with('agente')
             ->when($datos['agent_id'] ?? null, fn ($q, $v) => $q->where('agente_id', $v))
@@ -46,7 +54,7 @@ class TrabajoController extends Controller
             ->when($datos['to'] ?? null, fn ($q, $v) => $q->where('created_at', '<=', $v))
             ->orderByDesc('id');
 
-        return TrabajoResource::collection($query->paginate());
+        return TrabajoResource::collection($query->paginate($porPagina));
     }
 
     /**
