@@ -1,0 +1,19 @@
+# CRITICO: nunca hornear el .env de este servidor (Contabo) dentro de una
+# imagen -- tiene las credenciales reales de ESTE ambiente. El stack de
+# Docker recibe su propia config por variables de entorno en
+# docker-compose.yml / docker/app.env, nunca por un .env copiado del build
+# context.
+.env
+.env.*
+!.env.example
+
+.git
+node_modules
+vendor
+public/build
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+docker-compose.yml
+docker/app.env

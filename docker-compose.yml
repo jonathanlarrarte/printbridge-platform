@@ -1,0 +1,92 @@
+# Nombre de proyecto explicito -- en un servidor que puede tener OTROS
+# stacks de Docker corriendo (del mismo cliente, otros proyectos), esto
+# evita que un volumen/red/contenedor generico como "postgres_data" o
+# "app" choque con algo que ya existe. Todo lo de abajo queda prefijado
+# "printbridge-platform_...".
+name: printbridge-platform
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [printbridge]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [printbridge]
+
+  # Equivalente al `php artisan serve` que ya corre en produccion hoy, solo
+  # que administrado por Docker (restart: unless-stopped) en vez de un
+  # servicio systemd aparte -- misma idea, mismo comando, otro supervisor.
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    image: printbridge-platform:latest
+    restart: unless-stopped
+    env_file: docker/app.env
+    environment:
+      # Solo `app` corre migraciones al arrancar -- ver docker/scripts/entrypoint.sh.
+      RUN_MIGRATIONS: "true"
+    # Atado a localhost: igual que hoy, nunca expuesto directo a internet --
+    # el Nginx del host es quien hace TLS + reverse proxy hacia este puerto.
+    ports:
+      - "127.0.0.1:${APP_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [printbridge]
+
+  queue:
+    image: printbridge-platform:latest
+    restart: unless-stopped
+    env_file: docker/app.env
+    command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--max-time=3600"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [printbridge]
+
+  scheduler:
+    image: printbridge-platform:latest
+    restart: unless-stopped
+    env_file: docker/app.env
+    command: ["php", "artisan", "schedule:work"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [printbridge]
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  printbridge:
+    name: printbridge_net

@@ -9,6 +9,8 @@
 .env
 .env.backup
 .env.production
+docker/app.env
+docker/compose.env
 .phpactor.json
 .phpunit.result.cache
 Homestead.json
