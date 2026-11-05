@@ -6,6 +6,31 @@ lo que ya existe ahí. Todo lo de PrintBridge vive en contenedores propios;
 lo único que se agrega al sistema del host es **un archivo de vhost nuevo**
 en Nginx.
 
+## Prerrequisitos
+
+**Docker.** Si el servidor todavía no lo tiene:
+
+```bash
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER   # para no tener que usar sudo en cada comando (requiere volver a loguearte)
+```
+
+**El código.** El repo es privado, así que `git clone` normal no va a andar
+sin un token. Dos formas, elegí una:
+
+```bash
+# Opcion A: clonar con un Personal Access Token (pedí uno de solo lectura,
+# "Contents: Read-only" en los permisos del repo, al dueño del repo)
+git clone https://TU_USUARIO:TU_TOKEN@github.com/jonathanlarrarte/printbridge-platform.git
+cd printbridge-platform
+
+# Opcion B: si no queres manejar un token en ese servidor, empaquetar
+# localmente y subir por scp (igual que con el agente):
+#   tar --exclude=.git --exclude=node_modules --exclude=vendor -czf app.tar.gz .
+#   scp app.tar.gz usuario@servidor-cliente:/ruta/
+#   (en el servidor) tar -xzf app.tar.gz -C printbridge-platform/
+```
+
 ## 0. Inventario antes de tocar nada (de solo lectura)
 
 Corré esto primero y confirmá que no hay conflictos antes de seguir:
@@ -75,6 +100,27 @@ siempre es `DB_PASSWORD`/`REDIS_PASSWORD` no coincidiendo entre
 ## 5. El único cambio en el Nginx del cliente: un vhost nuevo
 
 **No edites ningún archivo de Nginx que ya exista.** Creá uno nuevo:
+
+Si **todavía no tenés certificado SSL** para el dominio, el camino más
+simple es pedirle uno a Let's Encrypt (gratis) -- certbot sabe detectar
+vhosts de Nginx y agregar el bloque `ssl_certificate` solo:
+
+```bash
+sudo apt install certbot python3-certbot-nginx
+```
+
+Primero creá el vhost SOLO con el bloque `:80` de abajo (sin el de `:443`
+todavía), activalo, y corré:
+
+```bash
+sudo certbot --nginx -d TU-DOMINIO
+```
+
+Certbot edita ese vhost (el tuyo, recién creado -- no toca los del
+cliente) y le agrega el bloque HTTPS con las rutas de certificado
+correctas automáticamente. Si el cliente **ya tiene** un certificado
+(wildcard u otro), usá el archivo completo de abajo con sus rutas en vez
+de certbot.
 
 ```nginx
 # /etc/nginx/sites-available/TU-DOMINIO.conf
