@@ -99,28 +99,42 @@ siempre es `DB_PASSWORD`/`REDIS_PASSWORD` no coincidiendo entre
 
 ## 5. El único cambio en el Nginx del cliente: un vhost nuevo
 
-**No edites ningún archivo de Nginx que ya exista.** Creá uno nuevo:
+**No edites ningún archivo de Nginx que ya exista.** Creá uno nuevo.
 
-Si **todavía no tenés certificado SSL** para el dominio, el camino más
-simple es pedirle uno a Let's Encrypt (gratis) -- certbot sabe detectar
-vhosts de Nginx y agregar el bloque `ssl_certificate` solo:
+### SSL con certificado de origen de Cloudflare (este es el caso: ya tienen el subdominio detrás de Cloudflare)
+
+Mismo esquema que ya corre en el servidor actual (`impryxa.vekronis.com`):
+Cloudflare maneja el cert público de cara al visitante; el servidor de
+origen usa un **Origin Certificate** propio de Cloudflare (no es Let's
+Encrypt) que solo es válido para conexiones que pasan por Cloudflare.
+
+1. En el dashboard de Cloudflare del subdominio: **SSL/TLS → Origin
+   Server → Create Certificate**. Dejá los defaults (RSA, 15 años),
+   confirmá que el hostname listado sea el subdominio correcto, y generá.
+   Te da dos bloques de texto: el certificado y la clave privada.
+2. En **SSL/TLS → Overview**, el modo de encriptación tiene que estar en
+   **Full (strict)** -- así Cloudflare exige que el origen presente este
+   certificado, no uno autofirmado cualquiera.
+3. En el servidor, guardalos con los mismos permisos que ya usa el
+   servidor actual (carpeta sin acceso de otros usuarios, clave privada
+   solo lectura para root):
 
 ```bash
-sudo apt install certbot python3-certbot-nginx
+sudo mkdir -p /etc/nginx/ssl
+sudo chmod 700 /etc/nginx/ssl
+sudo nano /etc/nginx/ssl/TU-SUBDOMINIO.crt   # pegar el certificado
+sudo nano /etc/nginx/ssl/TU-SUBDOMINIO.key   # pegar la clave privada
+sudo chmod 644 /etc/nginx/ssl/TU-SUBDOMINIO.crt
+sudo chmod 600 /etc/nginx/ssl/TU-SUBDOMINIO.key
 ```
 
-Primero creá el vhost SOLO con el bloque `:80` de abajo (sin el de `:443`
-todavía), activalo, y corré:
+4. Esas dos rutas van en `ssl_certificate` / `ssl_certificate_key` del
+   vhost de abajo.
 
-```bash
-sudo certbot --nginx -d TU-DOMINIO
-```
-
-Certbot edita ese vhost (el tuyo, recién creado -- no toca los del
-cliente) y le agrega el bloque HTTPS con las rutas de certificado
-correctas automáticamente. Si el cliente **ya tiene** un certificado
-(wildcard u otro), usá el archivo completo de abajo con sus rutas en vez
-de certbot.
+> Si en cambio **no** usan Cloudflare para este subdominio (DNS en gris,
+> sin proxy) y necesitan un cert público real, la alternativa es Let's
+> Encrypt vía `certbot --nginx -d TU-DOMINIO` (gratis, se renueva solo) --
+> no aplica a este caso pero queda documentado por si cambia.
 
 ```nginx
 # /etc/nginx/sites-available/TU-DOMINIO.conf
@@ -134,8 +148,8 @@ server {
     listen 443 ssl http2;
     server_name TU-DOMINIO;
 
-    ssl_certificate     /ruta/al/cert.crt;
-    ssl_certificate_key /ruta/al/cert.key;
+    ssl_certificate     /etc/nginx/ssl/TU-SUBDOMINIO.crt;
+    ssl_certificate_key /etc/nginx/ssl/TU-SUBDOMINIO.key;
 
     client_max_body_size 20m;
 
